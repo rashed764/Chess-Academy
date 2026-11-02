@@ -1,0 +1,6 @@
+{
+  "name": "Chess Academy",
+  "description": "Premium chess learning platform with adaptive master coaching, real-time analysis, and structured academy curricula.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
