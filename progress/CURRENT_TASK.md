@@ -1,57 +1,65 @@
-# Current Task: TASK 02 — Premium UI & Dashboard
+# Current Task: TASK 04 — Quick Match
 
-## Status: COMPLETED
+## Status: COMPLETED (Verified & Tested)
 
 ### Objective
-Transform CHESS ACADEMY into a visually exceptional, luxury chess club experience: elegant, minimal, and chess-first. Eliminate corporate/SaaS dashboard tropes and technical system-status clutter in favor of grandmaster aesthetic poise, primary action prioritization, and refined sensory feedback.
+Transform the Quick Match configuration interface into a fully functional, playable chess duel against the local Stockfish WASM engine with authoritative rule validation, interactive luxury board, high-precision chess clock, and comprehensive match flow.
 
 ---
 
-### Key Accomplishments & Deliverables
+### Key Deliverables & Implementation Details
 
-1. **Visual Identity & Luxury Aesthetic**:
-   - Palette: Canvas `#0B0D14`, Sidebar `#10121B`, Cards `#171A24`, Elevated `#1D2230`, Gold Accent `#D6B36A`.
-   - Typography: Elegant serif headers in Google Font `Cinzel`, UI prose in `Plus Jakarta Sans`, tabular notations in `JetBrains Mono`.
-   - Embedded high-resolution luxury chess artwork `/assets/aistudio/image_8b937a72.png` framed in the hero with warm bokeh and subtle gold borders.
+1. **Time Control Calibration (9 Presets + Custom)**:
+   - **Bullet**: 1+0, 2+1
+   - **Blitz**: 3+0, 3+2, 5+0, 5+3
+   - **Rapid**: 10+0, 15+10
+   - **Classical**: 30+0
+   - **Custom Clock Settings**: Full validation for initial minutes (1–180) and increment seconds (0–60).
 
-2. **Main Dashboard Redesign**:
-   - Hero Section: "Master the Game. One Move at a Time." with subtext and immediate action buttons (`Enter Academy`, `Play Quick Match`).
-   - Prioritized the 3 Primary Disciplines:
-     - **Quick Match**: Icon: swords-inspired, "Challenge the engine."
-     - **Training Academy**: Featured gold badge, graduation cap icon, "Learn and improve."
-     - **Test Arena**: Trophy icon, "Test your actual chess strength."
-   - Removed all Task 01 technical system status cards (`IChessEngineAdapter`, `IAIProviderAdapter`, `Boundary Safe`) to eradicate SaaS clutter.
-   - Restrained Secondary Information: Candidate Mastery Score progress bar, rating breakdown, and recent salon activity log.
+2. **Engine Difficulty & Search Budgeting (6 Tiers)**:
+   - **Beginner**: Skill Level 1, depth 4, 600ms max.
+   - **Casual**: Skill Level 5, depth 6, 900ms max.
+   - **Intermediate**: Skill Level 10, depth 8, 1400ms max.
+   - **Advanced**: Skill Level 14, depth 12, 2000ms max.
+   - **Expert**: Skill Level 18, depth 15, 2800ms max.
+   - **Maximum Strength**: Skill Level 20, depth 18, 3800ms max.
+   - **Adaptive Clock Scaling**: Engine search budget dynamically adapts (`calculateEngineSearchBudget`) to remaining time, preventing the engine from flagging under severe time pressure.
 
-3. **Navigation Architecture**:
-   - Main Navigation: Home (`/`), Quick Match (`/quick-match`), Training Academy (`/training`), Test Arena (`/test-arena`), Opening Library (`/openings`), Game Analysis (`/analysis`), Progress (`/progress`).
-   - Secondary Navigation: Profile (`/profile`), Settings (`/settings`).
-   - Compact, collapsible sidebar on desktop and accessible touch drawer on mobile with zero horizontal overflow.
+3. **Interactive Luxury Chessboard (`react-chessboard` v5 integration)**:
+   - Cohesive obsidian/carbon palette: `#1E2332` dark squares, `#384257` light squares.
+   - Drag-and-drop and click-to-move square selection.
+   - Gold target markers for legal moves and captures.
+   - Soft amber highlights for previous move (`lastMove`).
+   - Crimson luminescence on King when under check.
+   - Board orientation dynamically matches selected player color (White or Black).
+   - Board interactions cleanly disabled during Stockfish calculation or after game conclusion.
 
-4. **Chess Design Language & Acoustic Feedback**:
-   - Created `src/utils/sound.ts` with Web Audio API synthesizer generating warm wooden chess piece placement clicks and golden victory chimes.
-   - Interactive acoustic preview in `SettingsPage`.
+4. **Pawn Promotion Modal**:
+   - Modal prompt triggering upon pawn arrival at promotion rank (Queen, Rook, Bishop, Knight).
+   - Respects active player color piece icons and descriptions.
 
-5. **Page Refinements**:
-   - `QuickMatchPage`: Time discipline selectors (1+0 to 30+0), Stockfish difficulty slider (Lvl 1 to Lvl 20), color chooser.
-   - `TrainingAcademyPage`: 4-Tier grandmaster curriculum tracks with interactive lesson explorer.
-   - `TestArenaPage`: Assessment format selector and standardized evaluation protocols.
-   - `OpeningsPage`: Classical reference library with search, ECO codes (B90, C65, D37, E60), notation lines, and master database win rates.
-   - `AnalysisPage`: Study sanctum with move notation table, FEN copy tool, and multi-PV evaluation view.
-   - `ProgressPage`: Personal rating trajectory and study honors milestones.
+5. **High-Precision Chess Clock Model**:
+   - Pure timestamp math (`Date.now() - lastTimestamp`) eliminates interval drift.
+   - Handles tab visibility events instantly without time loss.
+   - Automatically switches to tenths of a second (`00:09.4`) under 10 seconds per FIDE standards.
+   - Detects flag drops and fires timeout events.
+
+6. **Move History & Match Flow**:
+   - Move history sheet rendering paired White and Black standard algebraic notation (SAN) moves.
+   - Auto-scrolls to the latest move.
+   - Authoritative `chess.js` validation for checkmate, stalemate, 3-fold repetition, 50-move rule, and insufficient material.
+   - Resignation and exit confirmation modals.
+   - Completed match modal showing outcome, termination reason, duration, move count, and options to play again or study in Analysis Sanctum.
 
 ---
 
 ### Executed Verifications
-- Production compilation (`compile_applet`): Passed.
-- TypeScript static check (`lint_applet` / `tsc --noEmit`): Passed (0 errors, 0 warnings).
-- Unit tests (`npx --yes tsx --test`): 15 passed, 0 failed.
-- Multi-viewport layout verification:
-  - Desktop (1440 × 900): Verified luxury hero, 3 disciplines, clean sidebar.
-  - Tablet (768 × 1024): Verified responsive reflow and readable typography.
-  - Mobile (390 × 844): Verified mobile header, touch drawer, zero horizontal overflow.
+- **Production Compilation (`compile_applet`)**: Succeeded.
+- **TypeScript Static Verification (`lint_applet` / `tsc --noEmit`)**: Succeeded (0 errors, 0 warnings).
+- **Unit Test Suite (`npx tsx --test`)**: 43 passed, 0 failed.
+- **Headless Browser Automated Play (`playwright-cli`)**: Verified setup flow, start match, clock ticking, move execution (1. e4), Stockfish engine reply (1... d5 Scandinavian), move history recording, resignation confirmation, and defeat result modal.
 
 ---
 
 ### Next Immediate Task
-- **TASK 03 — Chess Engine Integration** (Stockfish WASM Web Worker integration & UCI protocol).
+- **TASK 05 — Training Academy** (Structured academy curriculum tracks, exercise player, and solution verification).

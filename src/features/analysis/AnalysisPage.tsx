@@ -1,31 +1,124 @@
-import React, { useState } from 'react';
-import { Search, ArrowLeft, Upload, Copy, Play, Compass, Cpu } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ArrowLeft,
+  Copy,
+  Cpu,
+  Play,
+  Square,
+  RefreshCw,
+  Sliders,
+  Check,
+  AlertTriangle,
+} from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { STARTING_FEN } from '../../services/chess/fen';
+import { getChessEngine } from '../../services/chess/adapter';
+import { UCIProtocol } from '../../services/chess/engine/UCIProtocol';
+import type { EngineEvaluation } from '../../types/chess';
+import type { EngineStatus } from '../../services/chess/types';
 import { useAppStore } from '../../stores/useAppStore';
-import { playChessClick } from '../../utils/sound';
+import { playChessClick, playChime } from '../../utils/sound';
 
 export const AnalysisPage: React.FC = () => {
   const { currentProfile } = useAppStore();
-  const [fenInput, setFenInput] = useState(
-    'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-  );
+  const [fenInput, setFenInput] = useState(STARTING_FEN);
   const [copied, setCopied] = useState(false);
 
-  const sampleMoves = [
-    { num: 1, white: 'e4', black: 'e5', eval: '+0.2' },
-    { num: 2, white: 'Nf3', black: 'Nc6', eval: '+0.3' },
-    { num: 3, white: 'Bb5', black: 'a6', eval: '+0.3' },
-    { num: 4, white: 'Ba4', black: 'Nf6', eval: '+0.2' },
-    { num: 5, white: 'O-O', black: 'Be7', eval: '+0.4' },
-    { num: 6, white: 'Re1', black: 'b5', eval: '+0.3' },
-    { num: 7, white: 'Bb3', black: 'd6', eval: '+0.2' },
-  ];
+  // Engine state
+  const [engineStatus, setEngineStatus] = useState<EngineStatus>('uninitialized');
+  const [targetDepth, setTargetDepth] = useState<number>(12);
+  const [multiPvCount, setMultiPvCount] = useState<number>(2);
+  const [evaluation, setEvaluation] = useState<EngineEvaluation | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isEngineBusy, setIsEngineBusy] = useState(false);
+
+  const engineRef = useRef(getChessEngine());
+
+  // Listen to engine updates and ensure clean unmount
+  useEffect(() => {
+    const engine = engineRef.current;
+    setEngineStatus(engine.status);
+
+    engine.onEvaluationUpdate?.((liveEval) => {
+      setEvaluation({ ...liveEval });
+    });
+
+    return () => {
+      engine.stopSearch().catch(() => {});
+    };
+  }, []);
 
   const handleCopyFen = () => {
     navigator.clipboard.writeText(fenInput);
     setCopied(true);
     playChessClick(currentProfile.settings.soundEnabled, 0.4);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleResetStartPos = () => {
+    playChessClick(currentProfile.settings.soundEnabled, 0.5);
+    setFenInput(STARTING_FEN);
+    setEvaluation(null);
+    setErrorMessage(null);
+  };
+
+  const handleStartAnalysis = async () => {
+    setErrorMessage(null);
+    playChessClick(currentProfile.settings.soundEnabled, 0.5);
+
+    const engine = engineRef.current;
+    setIsEngineBusy(true);
+
+    try {
+      if (engine.status === 'uninitialized' || engine.status === 'error' || engine.status === 'terminated') {
+        setEngineStatus('loading');
+        await engine.init();
+      }
+
+      setEngineStatus('thinking');
+      const result = await engine.evaluatePosition(fenInput, {
+        depth: targetDepth,
+        multiPv: multiPvCount,
+      });
+
+      setEvaluation(result);
+      setEngineStatus('ready');
+      playChime(currentProfile.settings.soundEnabled, 0.4);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : String(err));
+      setEngineStatus(engine.status);
+    } finally {
+      setIsEngineBusy(false);
+    }
+  };
+
+  const handleStopAnalysis = async () => {
+    playChessClick(currentProfile.settings.soundEnabled, 0.5);
+    const engine = engineRef.current;
+    await engine.stopSearch();
+    setIsEngineBusy(false);
+    setEngineStatus('ready');
+  };
+
+  // Interpretation helper for position advantage
+  const getAdvantageDescription = (ev: EngineEvaluation | null): string => {
+    if (!ev) return 'Engine idle. Start analysis to evaluate position.';
+    if (ev.mateInMoves !== undefined && ev.mateInMoves !== null) {
+      return ev.mateInMoves > 0
+        ? `Forced Mate for White in ${ev.mateInMoves} moves`
+        : `Forced Mate for Black in ${Math.abs(ev.mateInMoves)} moves`;
+    }
+    if (ev.scoreCentipawns !== undefined && ev.scoreCentipawns !== null) {
+      const score = ev.scoreCentipawns;
+      if (Math.abs(score) < 25) return 'Even position · Dynamic equilibrium';
+      if (score >= 25 && score < 100) return 'Slight White initiative · Positional pressure';
+      if (score >= 100 && score < 300) return 'Clear White advantage · Favorable piece activity';
+      if (score >= 300) return 'Decisive White advantage · Winning position';
+      if (score <= -25 && score > -100) return 'Slight Black initiative · Positional pressure';
+      if (score <= -100 && score > -300) return 'Clear Black advantage · Favorable piece activity';
+      if (score <= -300) return 'Decisive Black advantage · Winning position';
+    }
+    return 'Calculating position variants...';
   };
 
   return (
@@ -45,14 +138,30 @@ export const AnalysisPage: React.FC = () => {
               Game Analysis & Study Sanctum
             </h2>
             <p className="text-xs text-[#9297A5] mt-0.5">
-              Engine calculation room, PGN move logs, and principal variation evaluation.
+              Live Stockfish WASM Web Worker calculation room, FEN analysis, and principal variations.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[#D6B36A] font-medium uppercase tracking-wider px-3 py-1 rounded-full border border-[#D6B36A]/30 bg-[#D6B36A]/10 font-sans">
-            Study Mode
+          <span
+            className={`text-xs font-medium uppercase tracking-wider px-3 py-1 rounded-full border font-sans ${
+              engineStatus === 'thinking'
+                ? 'border-[#D6B36A] bg-[#D6B36A]/20 text-[#D6B36A] animate-pulse'
+                : engineStatus === 'ready'
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+                : engineStatus === 'loading'
+                ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                : 'border-[#242938] bg-[#171A24] text-[#9297A5]'
+            }`}
+          >
+            {engineStatus === 'thinking'
+              ? 'Stockfish Searching'
+              : engineStatus === 'ready'
+              ? 'Stockfish Ready'
+              : engineStatus === 'loading'
+              ? 'Booting WASM'
+              : 'Engine Standby'}
           </span>
         </div>
       </div>
@@ -64,36 +173,107 @@ export const AnalysisPage: React.FC = () => {
           <div className="rounded-xl border border-[#242938] bg-[#171A24] p-5 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-[#F4F4F5] font-cinzel">Position FEN</span>
-              <button
-                type="button"
-                onClick={handleCopyFen}
-                className="text-xs text-[#D6B36A] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span>{copied ? 'Copied' : 'Copy FEN'}</span>
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleResetStartPos}
+                  className="text-xs text-[#9297A5] hover:text-[#F4F4F5] flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Start Pos</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyFen}
+                  className="text-xs text-[#D6B36A] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied' : 'Copy FEN'}</span>
+                </button>
+              </div>
             </div>
             <input
               type="text"
               value={fenInput}
-              onChange={(e) => setFenInput(e.target.value)}
+              onChange={(e) => {
+                setFenInput(e.target.value);
+                setErrorMessage(null);
+              }}
               className="w-full bg-[#10121B] border border-[#242938] rounded-lg p-2.5 text-xs font-mono text-[#E8CF96] focus:outline-none focus:border-[#D6B36A]"
+              placeholder="Paste FEN string..."
             />
+            {errorMessage && (
+              <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/50 flex items-center gap-2 text-xs text-red-200">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
           </div>
 
-          {/* Move Notation Sheet */}
+          {/* Engine Parameters */}
           <div className="rounded-xl border border-[#242938] bg-[#171A24] p-5 space-y-4">
-            <h3 className="text-sm font-bold text-[#F4F4F5] font-cinzel">Move Notation Sheet</h3>
+            <div className="flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-[#D6B36A]" />
+              <h3 className="text-sm font-bold text-[#F4F4F5] font-cinzel">
+                Calculation Calibration
+              </h3>
+            </div>
 
-            <div className="divide-y divide-[#242938]/60 text-xs font-mono">
-              {sampleMoves.map((m) => (
-                <div key={m.num} className="grid grid-cols-12 py-2 hover:bg-[#10121B]/40 px-2 rounded">
-                  <span className="col-span-2 text-[#9297A5]">{m.num}.</span>
-                  <span className="col-span-4 text-[#F4F4F5] font-semibold">{m.white}</span>
-                  <span className="col-span-4 text-[#F4F4F5] font-semibold">{m.black}</span>
-                  <span className="col-span-2 text-[#D6B36A] text-right">{m.eval}</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="space-y-1.5 bg-[#10121B] p-3 rounded-lg border border-[#242938]">
+                <div className="flex justify-between font-mono">
+                  <span className="text-[#9297A5]">Search Depth:</span>
+                  <span className="text-[#D6B36A] font-semibold">{targetDepth} ply</span>
                 </div>
-              ))}
+                <input
+                  type="range"
+                  min="5"
+                  max="20"
+                  value={targetDepth}
+                  onChange={(e) => setTargetDepth(Number(e.target.value))}
+                  disabled={isEngineBusy}
+                  className="w-full accent-[#D6B36A] cursor-pointer disabled:opacity-50"
+                />
+              </div>
+
+              <div className="space-y-1.5 bg-[#10121B] p-3 rounded-lg border border-[#242938]">
+                <div className="flex justify-between font-mono">
+                  <span className="text-[#9297A5]">Multi-PV Lines:</span>
+                  <span className="text-[#D6B36A] font-semibold">{multiPvCount} lines</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="3"
+                  value={multiPvCount}
+                  onChange={(e) => setMultiPvCount(Number(e.target.value))}
+                  disabled={isEngineBusy}
+                  className="w-full accent-[#D6B36A] cursor-pointer disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-1">
+              {!isEngineBusy ? (
+                <button
+                  type="button"
+                  onClick={handleStartAnalysis}
+                  className="flex-1 py-3 px-4 rounded-lg bg-[#D6B36A] hover:bg-[#E8CF96] text-[#0B0D14] font-bold text-xs tracking-wider uppercase transition-all shadow-md shadow-[#D6B36A]/10 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>Start Stockfish Analysis</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleStopAnalysis}
+                  className="flex-1 py-3 px-4 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs tracking-wider uppercase transition-all shadow-md shadow-red-600/10 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Square className="w-4 h-4 fill-current" />
+                  <span>Stop Engine Search</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -104,57 +284,73 @@ export const AnalysisPage: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-[#242938]">
               <div className="flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-[#D6B36A]" />
-                <h3 className="text-sm font-bold text-[#F4F4F5] font-cinzel">Engine Evaluator</h3>
+                <h3 className="text-sm font-bold text-[#F4F4F5] font-cinzel">Stockfish WASM</h3>
               </div>
-              <span className="text-[11px] font-mono text-[#D6B36A]">Depth 24 / 24</span>
+              <span className="text-[11px] font-mono text-[#D6B36A]">
+                Depth {evaluation?.depth ?? 0} / {targetDepth}
+              </span>
             </div>
 
             {/* Evaluation Score Display */}
             <div className="p-4 rounded-xl bg-[#10121B] border border-[#242938] text-center space-y-1">
               <span className="text-[10px] text-[#9297A5] uppercase tracking-wider block">
-                Position Advantage
+                Position Evaluation
               </span>
-              <span className="text-2xl font-bold font-mono text-[#F4F4F5]">
-                +0.34
+              <span className="text-3xl font-bold font-mono text-[#F4F4F5]">
+                {UCIProtocol.formatEvaluationText(
+                  evaluation?.scoreCentipawns,
+                  evaluation?.mateInMoves
+                )}
               </span>
-              <span className="text-[10px] text-[#9297A5] block">
-                Slight White Initiative · Equal Material
+              <span className="text-[11px] text-[#9297A5] block">
+                {getAdvantageDescription(evaluation)}
               </span>
             </div>
+
+            {/* Best Move Spotlight */}
+            {evaluation?.bestMoveUci && (
+              <div className="p-3 rounded-lg bg-[#1D2230] border border-[#D6B36A]/30 flex items-center justify-between text-xs">
+                <span className="text-[#9297A5] font-mono">Recommended Best Move:</span>
+                <span className="font-mono font-bold text-[#D6B36A] text-sm">
+                  {evaluation.bestMoveSan ? `${evaluation.bestMoveSan} (${evaluation.bestMoveUci})` : evaluation.bestMoveUci}
+                </span>
+              </div>
+            )}
 
             {/* Principal Variations */}
             <div className="space-y-3">
               <span className="text-[11px] uppercase font-bold tracking-wider text-[#9297A5] font-cinzel">
-                Top Principal Variations
+                Principal Variations (PV)
               </span>
 
               <div className="space-y-2 text-xs">
-                <div className="p-3 rounded-lg bg-[#10121B]/70 border border-[#242938]">
-                  <div className="flex justify-between font-mono text-[#D6B36A] text-[11px] mb-1">
-                    <span>Line 1 (+0.34)</span>
-                    <span>Stockfish WASM</span>
+                {evaluation?.pvLines && evaluation.pvLines.length > 0 ? (
+                  evaluation.pvLines.map((line, idx) => (
+                    <div key={idx} className="p-3 rounded-lg bg-[#10121B]/70 border border-[#242938]">
+                      <div className="flex justify-between font-mono text-[#D6B36A] text-[11px] mb-1">
+                        <span>Line {idx + 1}</span>
+                        <span>Stockfish WASM</span>
+                      </div>
+                      <p className="font-mono text-[#F4F4F5] text-[11px] leading-relaxed break-all">
+                        {line}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-3 rounded-lg bg-[#10121B]/40 border border-[#242938] text-center text-[#9297A5] text-[11px]">
+                    No search active. Click &quot;Start Stockfish Analysis&quot; to begin deep search.
                   </div>
-                  <p className="font-mono text-[#F4F4F5] text-[11px] leading-relaxed">
-                    1. Re1 b5 2. Bb3 d6 3. c3 O-O 4. h3 Nb8 5. d4 Nbd7
-                  </p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-[#10121B]/70 border border-[#242938]">
-                  <div className="flex justify-between font-mono text-[#9297A5] text-[11px] mb-1">
-                    <span>Line 2 (+0.18)</span>
-                    <span>Alternative</span>
-                  </div>
-                  <p className="font-mono text-[#9297A5] text-[11px] leading-relaxed">
-                    1. d3 d6 2. c3 g6 3. Nbd2 Bg7 4. Re1 O-O
-                  </p>
-                </div>
+                )}
               </div>
             </div>
 
-            <div className="p-3 rounded-lg bg-[#10121B] border border-[#242938] text-[11px] text-[#9297A5] leading-relaxed">
-              Real-time deep calculation, multi-PV depth adjustments, and live Chessground position
-              synchronization activate in <strong>TASK 03 & TASK 08</strong>.
-            </div>
+            {/* Live Metrics */}
+            {evaluation?.nodesVisited !== undefined && (
+              <div className="flex justify-between items-center text-[10px] font-mono text-[#9297A5] pt-2 border-t border-[#242938]">
+                <span>Nodes evaluated: {evaluation.nodesVisited.toLocaleString()}</span>
+                <span>Worker: Dedicated WASM</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
