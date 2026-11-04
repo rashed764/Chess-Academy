@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
   HelpCircle,
@@ -50,6 +50,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     currentHint,
     currentHintStage,
     requestHint,
+    clearHint,
     loadingPosition,
     positionError,
     positionExplanation,
@@ -58,6 +59,15 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     chatLoading,
     sendChatMessage,
   } = useAICoach();
+
+  // Invalidate stale hint context when position FEN changes or exercise resets
+  const prevFenRef = useRef(fen);
+  useEffect(() => {
+    if (prevFenRef.current !== fen) {
+      prevFenRef.current = fen;
+      clearHint();
+    }
+  }, [fen, clearHint]);
 
   const handleFetchHint = (stage: HintStage) => {
     requestHint(fen, objective, stage, expectedMoveSan, exerciseCategory);

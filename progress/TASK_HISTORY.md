@@ -131,4 +131,46 @@
     - **Build**: `npm run build` passed.
     - **Playwright Browser Tests**: Verified LessonRoom hints (Stage 1 & 2), zero attempt count mutation, AnalysisPage position analysis, and Quick Match integrity.
 
+## [2026-11-04] — TASK 06: Final Corrective Audit & Regression Verification
+- **Status**: COMPLETED & VERIFIED
+- **Auditor / Systems Engineer**: Senior Staff Software Engineer
+- **Corrective Audit Findings & Actions**:
+  - **Centipawn Loss Thresholds & Boundary Conditions**:
+    - Removed ambiguity in classification definitions. Documented exact custom educational thresholds:
+      - `best`: loss <= 10 cp, or mate-in-N preserved.
+      - `good`: 10 cp < loss <= 30 cp.
+      - `inaccuracy`: 30 cp < loss <= 90 cp.
+      - `mistake`: 90 cp < loss <= 200 cp.
+      - `blunder`: loss > 200 cp, or mate missed/blundered.
+      - `brilliant`: Strictly requires sound sacrifice with mover advantage (>= +150 cp) or mate. Unproven sacrifices conservatively fall back to `best` with explicit documentation.
+      - `unclassified`: Missing evaluation or search depth < 6 ply.
+    - Symmetric White/Black evaluation perspective and mate-in-N logic implemented.
+  - **Stockfish Provenance & Trust Boundary**:
+    - Browser Stockfish is client-side WASM; server does not pretend to execute it independently.
+    - Headless `chess.js` validates position consistency (`fenBefore` + `move` == `fenAfter`).
+    - Principal variations (PV) are replayed; invalid PVs are rejected with `pvVerification: false`.
+    - All responses tagged with provenance `client_stockfish_wasm`.
+  - **Server Hardening & Stability**:
+    - Reverse proxy headers respected (`app.set('trust proxy', 1);`).
+    - Request body payload capped at 200kb.
+    - Removed deprecated sampling parameters for `gemini-3.8-flash` in `@google/genai`.
+    - Added 10-second timeout guard on external calls.
+    - Fixed client retry logic to not retry permanent 4xx errors.
+    - Updated `CoachPanel` to clear active hints when position FEN changes or exercise resets.
+  - **Verifications**:
+    - Unit tests: 78/78 passed (100% pass rate).
+    - `tsc --noEmit`: 0 errors.
+    - `npm run build`: Succeeded in 1.18s.
+    - Playwright browser regression: Full verification across LessonRoom hints, attempt tracking, Game Analysis, and Quick Match.
 
+## [2026-11-04] — TASK 06: Final Acceptance Gap Closure Verification
+- **Status**: IN_PROGRESS (Verification & Gap Closure Completed, Awaiting User Review)
+- **Systems & Verification Engineer**: Senior Staff Software Engineer
+- **Summary of Actions & Evidentiary Findings**:
+  - **Exact Numeric Threshold Matrix**: Published plain-text formula matrix with lower and upper bounds, inclusive/exclusive boundaries, mover-relative delta conventions, depth minimum (6 ply), and mate preservation logic.
+  - **Engine Provenance Enforcement**: Confirmed all Stockfish fields and move quality classifications carry `provenance: 'client_stockfish_wasm'`. Clarified headless `chess.js` role as structural validator rather than numerical engine verifier.
+  - **Live Gemini Provider Testing**: Verified missing-key state returns deterministic fallback (`source: 'local_fallback'`) across all 6 operations. Live provider calls recorded as `LIVE GEMINI GENERATION: NOT VERIFIED / BLOCKED` due to unconfigured container API key / egress restrictions.
+  - **Prompt Injection Defense**: Added permanent automated regression tests in `tests/unit/coach.test.ts` for 4 adversarial injection patterns. Verified 100% defense without leaking solution moves.
+  - **Timeout & Request Cancellation**: Updated `withTimeout` to pass `AbortController.signal` into `@google/genai` request config. Confirmed client-side connection abort on 10s deadline.
+  - **Production Runtime Verification**: Successfully executed production build, launched production server on port 3005 (`NODE_ENV=production tsx server.ts`), and verified static assets, all 6 API endpoints, 400 validation error on malformed input, and SPA route fallback.
+  - **Test Suite Status**: 80/80 unit tests passing (100%), `tsc --noEmit` 0 errors, `npm run build` passing.

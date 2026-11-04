@@ -13,8 +13,10 @@
 | **Opponent Move Highlighting** | Counter-moves had no coordinate exposure | **RESOLVED in Task 05 Recovery** | `MoveAttemptResult` exposes `opponentReplyDetails`; `ExerciseBoard` highlights opponent move squares. |
 | **Curriculum Type Contracts** | Duplicated diverging interfaces | **RESOLVED in Task 05 Recovery** | `src/types/curriculum.ts` re-exports canonical types from `src/features/training/types.ts`. |
 | **Position-Aware Move Matching** | Raw string stripping could misinterpret notations | **RESOLVED in Task 05 Recovery** | `playSanOrUci` and `doesMoveMatchTarget` resolve legal moves against `chess.moves({ verbose: true })`. |
-| **Cloud AI Coaching** | Server-side Gemini API adapter unconfigured | **RESOLVED in Task 06** | Express backend `/api/coach` endpoints with Gemini 3.8 Flash, rate limiting, FEN validation, 3-stage progressive hints, move classification, and offline fallback. |
-| **Supabase Cloud Sync** | Supabase project is not yet provisioned. | Low (Expected in Task 06) | Safe boundary check returns `null`. Works out-of-the-box in local preview mode. Scheduled for **TASK 09: Backend & Cloud Synchronization**. |
+| **Cloud AI Coaching** | Server-side Gemini API integration | **RESOLVED in Task 06** | Express backend `/api/coach` endpoints with Gemini 3.8 Flash, rate limiting, FEN validation, 3-stage progressive hints, move classification, and deterministic fallback. |
+| **In-Memory Rate Limiter Boundary** | Token bucket is in-memory per Node process. | Architectural Limitation | State resets on server restart and is not shared across multi-node clusters. Acceptable for single-instance applet; Task 09 can integrate Redis if distributed clustering is required. |
+| **Container LLM Egress / Credentials** | External API egress or missing API key in container environment. | Environmental Boundary | Guarded with 10-second timeout and high-fidelity deterministic local fallback (`source: 'local_fallback'`). App remains 100% operational offline. |
+| **Supabase Cloud Sync** | Supabase project is not yet provisioned. | Low (Scheduled) | Safe boundary check returns `null`. Works out-of-the-box in local preview mode. Scheduled for **TASK 09: Backend & Cloud Synchronization**. |
 | **Hot Module Replacement (HMR)** | HMR disabled by container policy (`DISABLE_HMR=true`). | Environment | Dev server restarted after code updates. |
 
 ---

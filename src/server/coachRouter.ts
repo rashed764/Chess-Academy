@@ -6,6 +6,7 @@ import {
   validateHintStage,
   validateText,
   validateMoveInPosition,
+  validatePositionConsistency,
 } from './validators';
 import {
   generateCoachHint,
@@ -31,6 +32,7 @@ coachRouter.get('/status', (_req: Request, res: Response) => {
     serverTime: new Date().toISOString(),
   });
 });
+
 
 /**
  * POST /api/coach/hint
@@ -130,6 +132,12 @@ coachRouter.post('/explain-move', async (req: Request, res: Response): Promise<v
   const fenAVal = validateFen(fenAfter);
   if (!fenAVal.valid || !fenAVal.data) {
     res.status(400).json({ error: 'Invalid fenAfter', details: fenAVal.error });
+    return;
+  }
+
+  const consistency = validatePositionConsistency(fenBVal.data, moveVal.data.san, fenAVal.data);
+  if (!consistency.valid) {
+    res.status(400).json({ error: 'Inconsistent Move Sequence', details: consistency.error });
     return;
   }
 

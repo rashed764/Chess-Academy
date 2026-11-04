@@ -82,6 +82,12 @@ export interface CoachPositionExplanationResponse {
   strategicAdvice: string;
   evaluationSummary?: string;
   source: 'gemini' | 'local_fallback';
+  provenance?: string;
+  pvVerification?: {
+    verified: boolean;
+    legalMovesSan?: string[];
+    rejectedAt?: string;
+  };
 }
 
 export interface CoachMoveExplanationResponse {
@@ -92,6 +98,9 @@ export interface CoachMoveExplanationResponse {
   keyTacticalRisk?: string;
   alternativeBetterLines?: string[];
   source: 'gemini' | 'local_fallback';
+  provenance?: string;
+  boundaryRule?: string;
+  classificationNote?: string;
 }
 
 export interface CoachServerStatusResponse {

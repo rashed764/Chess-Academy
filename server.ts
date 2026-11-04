@@ -14,7 +14,11 @@ async function startServer() {
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   const isProd = process.env.NODE_ENV === 'production';
 
-  app.use(express.json({ limit: '1mb' }));
+  // Respect reverse proxy (Google Cloud Run / Load Balancer) headers
+  app.set('trust proxy', 1);
+
+  // Bounded request body payload to prevent denial of service (chess JSON payloads < 10kb)
+  app.use(express.json({ limit: '200kb' }));
 
   // Mount Coach API router
   app.use('/api/coach', coachRouter);

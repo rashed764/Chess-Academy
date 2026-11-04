@@ -145,26 +145,45 @@ Level (7 levels: Absolute Beginner to Grandmaster Preparation)
 
 ## 5. AI Coach Intelligence Architecture (TASK 06)
 
-1. **Hybrid Architecture Principle**:
-   - **Stockfish WASM + chess.js = Chess Truth**: Engine calculations, numerical centipawn evaluations, forced mate detection, and move legality are strictly authoritative. The LLM never declares best moves or evaluations without Stockfish verification.
-   - **Google GenAI (Gemini 3.8 Flash via `@google/genai`) = Educational Explanation**: Generates nuanced explanations, tactical breakdowns, and progressive hints.
-2. **Server-Side Security & Rate Limiting (`src/server/`)**:
+1. **Hybrid Architecture & Trust Boundary Principle**:
+   - **Local Stockfish WASM + Headless chess.js = Chess Truth**: Engine calculations, numerical centipawn evaluations, forced mate detection, and move legality are authoritative.
+   - **Data Provenance**: Stockfish runs strictly in the client's browser Web Worker (`client_stockfish_wasm`). The server does not falsely claim to execute Stockfish independently. Any engine data received from the browser is treated as untrusted client data and tagged with `provenance: 'client_stockfish_wasm'`.
+   - **Server-Side Validation**: Every FEN is validated with `chess.js`, move legality in the position is strictly verified, position consistency (`fenBefore` + `move` == `fenAfter`) is checked, and any client-supplied Principal Variations (PV) are replayed on a headless board. If illegal moves are present in the PV, `pvVerification` is set to `false`.
+   - **Google GenAI (Gemini 3.8 Flash via `@google/genai`) = Educational Explanation**: Generates pedagogical commentary, strategic advice, and progressive hints. The LLM never creates numerical evaluations or authoritative best moves.
+
+2. **Server-Side Security, Hardening & Rate Limiting (`src/server/`)**:
    - Express server (`server.ts`) hosting API routes at `/api/coach`.
-   - `GEMINI_API_KEY` is loaded strictly on the server and is never sent to the browser or exposed in client bundles.
-   - Per-IP in-memory token bucket rate limiter (60 requests/minute) protects against endpoint abuse.
+   - `trust proxy: 1` enabled for accurate client IP identification behind reverse proxies (`X-Forwarded-For`).
+   - Request body limit capped at `200kb` to protect against payload flooding DoS attacks.
+   - Per-IP in-memory token bucket rate limiter (60 requests/minute, burst capacity 60). Note: Being in-memory, buckets reset across server restarts and are local to each Node process. For horizontal multi-instance scaling in future production tasks, a Redis-backed distributed limiter can be substituted without API contract changes.
+   - `GEMINI_API_KEY` is loaded strictly on the server and is never sent to the browser or bundled in client code.
    - Strict input validation via `src/server/validators.ts`: FEN validation using `chess.js`, move legality checking, hint stage restriction (1, 2, 3), and text length bounds.
+   - External LLM requests wrapped in a 10-second timeout guard to ensure fast fallback.
+
 3. **Progressive Hint Engine (`generateCoachHint`)**:
    - Three pedagogical hint stages:
-     - **Stage 1 (Direction/Nudge)**: Points to relevant board sector or piece vulnerability without naming pieces or moves.
-     - **Stage 2 (Tactical Motif)**: Explains the underlying tactical motif (pin, fork, skewer, deflection) and why it works.
-     - **Stage 3 (Concrete Idea)**: Directs calculation to forcing candidate moves and key squares.
-   - Protected against prompt injection by separating system instructions from untrusted user text.
-   - Does NOT increment exercise attempt counters or auto-solve puzzles.
-4. **Move Quality Classification (`classifyMoveQuality`)**:
-   - Compares centipawn evaluations before and after moves from the active mover's perspective.
-   - 7 canonical tiers: `brilliant` (sound tactical sacrifices), `best` (loss <= 10 cp or matches engine best move), `good` (loss <= 30 cp), `inaccuracy` (loss <= 90 cp), `mistake` (loss <= 200 cp), `blunder` (loss > 200 cp or mate blunder), and `unclassified` (when evaluation is pending).
+     - **Stage 1 (Direction/Nudge)**: Directs player attention to the relevant sector, undefended pieces, or overloaded defenders without naming pieces or moves.
+     - **Stage 2 (Tactical Motif)**: Explains the underlying tactical motif (pin, fork, skewer, deflection, decoy) and the principle behind it.
+     - **Stage 3 (Concrete Idea)**: Directs concrete calculation to forcing candidate moves and key squares.
+   - Prompt injection resistance: System instructions, chess position data, and user messages are cleanly separated; system instructions forbid revealing puzzle solutions or overriding role constraints.
+   - Non-interference: Requesting hints does NOT increment exercise attempt counters, penalize success rates, or auto-solve puzzles.
+
+4. **Move Quality Classification Matrix (`classifyMoveQuality`)**:
+   - Compares evaluations before and after moves from the active mover's perspective:
+     - For White: `evalLoss = scoreBefore - scoreAfter`
+     - For Black: `evalLoss = scoreAfter - scoreBefore`
+   - **Exact Educational Centipawn Loss Thresholds**:
+     - `best`: `evalLoss <= 10 cp` or matches engine recommended best move, or forced mate-in-N is preserved.
+     - `good`: `10 cp < evalLoss <= 30 cp`.
+     - `inaccuracy`: `30 cp < evalLoss <= 90 cp`.
+     - `mistake`: `90 cp < evalLoss <= 200 cp`.
+     - `blunder`: `evalLoss > 200 cp`, or player allows a forced mate against themselves, or player misses a forced mate they previously possessed.
+     - `brilliant`: Strictly requires a sound tactical sacrifice with decisive engine advantage (`score >= +150 cp`) or mate. Unproven sacrifices conservatively fall back to `best` with explicit documentation.
+     - `unclassified`: Missing before/after evaluation, or engine search depth is insufficient (`depth < 6 ply`).
+   - *Note*: These thresholds are custom educational thresholds designed for pedagogical clarity in Chess Academy, not universal FIDE rules or official standard classifications.
+
 5. **Deterministic Local Fallback**:
-   - When offline or when `GEMINI_API_KEY` is unconfigured, all endpoints return high-quality deterministic responses derived genuinely from exercise data, tagged with `source: 'local_fallback'`.
+   - When offline or when `GEMINI_API_KEY` is unconfigured, all endpoints return high-quality deterministic responses derived genuinely from exercise and engine data, tagged with `source: 'local_fallback'` and `provenance: 'client_stockfish_wasm'`.
 
 ---
 

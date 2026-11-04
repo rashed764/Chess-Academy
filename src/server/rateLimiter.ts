@@ -11,12 +11,21 @@ const buckets = new Map<string, TokenBucket>();
 const MAX_TOKENS = 60;
 const REFILL_RATE_PER_MS = 60 / (60 * 1000); // 1 token per second
 
+export function extractClientIp(req: Request): string {
+  if (req.ip) return req.ip;
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket.remoteAddress || 'unknown';
+}
+
 /**
  * In-memory Token Bucket rate limiter per IP address.
  */
 export function createRateLimiter(maxTokens: number = MAX_TOKENS, refillRate: number = REFILL_RATE_PER_MS) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const ip = extractClientIp(req);
     const now = Date.now();
 
     let bucket = buckets.get(ip);
