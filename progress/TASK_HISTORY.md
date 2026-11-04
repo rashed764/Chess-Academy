@@ -65,3 +65,70 @@
   - Resolved progress inflation: preventing duplicate `lesson_completed` activity records when revisiting completed lessons.
   - Unit test suite expanded to 57 passing tests (0 failures).
   - Full Playwright E2E verification of moves, rejections, multi-move branches, reload persistence, URL route locks, and corrupt storage recovery.
+
+## [2026-11-04] — TASK 05: Targeted Recovery Implementation
+- **Status**: COMPLETED & VERIFIED
+- **Architect / Engineer**: Senior Chess Engine & Architecture Recovery Engineer
+- **Summary of Recovery Changes**:
+  - **Area 1: Canonical Curriculum Ordering**:
+    - Created explicit `CANONICAL_LESSON_IDS` array (30 lessons in exact pedagogical order) in `src/features/training/data/index.ts`.
+    - Repaired array insertion placement in `curriculumData.ts` for `l-504` (after `l-503`), `l-604` (after `l-603`), and `l-704` (after `l-703`).
+    - Made `getNextLesson` and `getPreviousLesson` deterministic and symmetrical.
+  - **Area 2: Failed Exercise Attempt Recording**:
+    - Extended `useExerciseSession` with `onAttemptRecorded` callback and `ExerciseAttemptNotification`.
+    - Wired callback into `LessonRoom` and `ProgressStorage.recordExerciseAttempt`.
+    - Verified incrementing `totalExerciseAttempts` and `incorrectExerciseAttempts` on invalid attempts, mathematical success rate `(total - incorrect) / total * 100`, and `exercise_failed` activity events without duplicate spam.
+  - **Area 3: Opponent Move Coordinates & Highlighting**:
+    - Extended `MoveAttemptResult` with `opponentReplyDetails: { from, to, san, uci }`.
+    - Updated `useExerciseSession` to update `lastMove` with opponent squares during automatic replies.
+    - `ExerciseBoard` highlights opponent source and target squares.
+  - **Area 4: Complete Exercise-Session Move History**:
+    - Added `moveHistorySan: string[]` and `moveHistory: MoveRecord[]` to `useExerciseSession`.
+    - Preserves before/after FEN and move parameters for player and opponent counter-moves.
+    - Added interactive move history chip sequence to `LessonRoom` UI; clears on session reset.
+  - **Area 5: Unified Type Contracts**:
+    - Standardized `src/types/curriculum.ts` to re-export canonical definitions from `src/features/training/types.ts`.
+    - Preserved downstream compatibility types (`ArenaEvaluationReport`, `UserLessonProgress`) without cycles or `as any` casts.
+  - **Area 6: SAN/UCI Move Compatibility**:
+    - Implemented `playSanOrUci` in `ExerciseValidator` resolving moves strictly against legal moves in the position via `chess.moves({ verbose: true })`.
+    - Matches UCI moves by `from`, `to`, and `promotion`.
+  - **Verifications**:
+    - 65/65 unit tests passed (including MoveRecord replay against chess.js, SAN/UCI resolution matrix, programmatic 30-lesson curriculum integrity, and storage backward compatibility).
+    - `tsc --noEmit` passed with 0 errors.
+    - Strictly verified zero modifications to TASK 06 or TASK 07.
+
+## [2026-11-04] — TASK 06: AI Coach Intelligence
+- **Status**: COMPLETED & VERIFIED
+- **Architect / Engineer**: Lead AI & Chess Intelligence Engineer
+- **Summary of Implementation**:
+  - **Hybrid Architecture Principle**:
+    - **Stockfish WASM + chess.js = Chess Truth**: Authoritative legality, numerical evaluations, best moves, and mate scores come strictly from the local Stockfish WASM engine and chess.js.
+    - **Google GenAI (Gemini 3.8 Flash) = Educational Explanation**: Explains positions, moves, tactical motifs, and generates 3-stage progressive hints without fabricating evaluations or declaring best moves without engine proof.
+  - **Full-Stack Server & Security**:
+    - Configured `server.ts` Express entry point on port 3000 mounting `/api/coach` router and Vite middlewares in dev (`"dev": "tsx server.ts"`).
+    - `src/server/geminiClient.ts`: Server-side client using `@google/genai` with `User-Agent: aistudio-build`. `GEMINI_API_KEY` remains strictly server-side.
+    - `src/server/rateLimiter.ts`: In-memory token bucket rate limiter (60 req/min per IP).
+    - `src/server/validators.ts`: Input validation for FEN positions (`chess.js`), hint stages (1, 2, 3), move legality in position, and text lengths.
+    - `src/server/coachService.ts`:
+      - Move quality classification into 7 standard categories (`brilliant`, `best`, `good`, `inaccuracy`, `mistake`, `blunder`, `unclassified`) based on mover's perspective and centipawn loss.
+      - 3-stage progressive hints (Stage 1: Direction/Nudge, Stage 2: Tactical Motif, Stage 3: Concrete Idea) with prompt injection resistance.
+      - Positional breakdown and strategic advice anchored in Stockfish WASM engine scores.
+      - Move explanation grounded in before/after engine evaluations.
+      - Interactive dialogue agent with GM pedagogical persona.
+      - Fully deterministic local fallback when offline or unconfigured (`source: 'local_fallback'`).
+    - `src/server/coachRouter.ts`: Express routes (`/status`, `/hint`, `/explain-position`, `/explain-move`, `/chat`).
+  - **Frontend UI & Components**:
+    - `src/services/ai/coachClient.ts`: Client with 15s timeout and 2x exponential backoff retries.
+    - `src/features/coach/hooks/useAICoach.ts`: Hook for managing hints, position analysis, move explanation, and chat.
+    - `src/features/coach/components/MoveQualityBadge.tsx`: Color-coded badges with centipawn loss.
+    - `src/features/coach/components/CoachPanel.tsx`: Tabbed panel (Hints, Position, Dialogue) styled in luxury dark chess club aesthetic.
+    - Mounted `CoachPanel` into `LessonRoom.tsx`: hints do not alter exercise attempts or auto-solve puzzles.
+    - Mounted `CoachPanel` into `AnalysisPage.tsx`: deep positional insights alongside Stockfish WASM.
+    - Preserved Quick Match completely unassisted.
+  - **Verifications**:
+    - **Unit Tests**: 72/72 tests passed (added `tests/unit/coach.test.ts` verifying security, FEN validation, move legality rejection, centipawn classification, hint progression without leaking moves, and rate limiting).
+    - **TypeScript Static Verification**: `tsc --noEmit` passed with 0 errors.
+    - **Build**: `npm run build` passed.
+    - **Playwright Browser Tests**: Verified LessonRoom hints (Stage 1 & 2), zero attempt count mutation, AnalysisPage position analysis, and Quick Match integrity.
+
+

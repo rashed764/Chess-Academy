@@ -54,6 +54,53 @@ export interface AIProviderCapabilities {
   modelIdentifier: string;
 }
 
+export type HintStage = 1 | 2 | 3;
+
+export type MoveQuality = 
+  | 'brilliant'
+  | 'best'
+  | 'good'
+  | 'inaccuracy'
+  | 'mistake'
+  | 'blunder'
+  | 'unclassified';
+
+export interface ProgressiveHintResponse {
+  stage: HintStage;
+  title: string;
+  hint: string;
+  pedagogicalFocus: string;
+  source: 'gemini' | 'local_fallback';
+  targetSquare?: string;
+}
+
+export interface CoachPositionExplanationResponse {
+  headline: string;
+  positionalBreakdown: string[];
+  tacticalOpportunities: string[];
+  recommendedPlans: string[];
+  strategicAdvice: string;
+  evaluationSummary?: string;
+  source: 'gemini' | 'local_fallback';
+}
+
+export interface CoachMoveExplanationResponse {
+  quality: MoveQuality;
+  scoreDifferenceCentipawns?: number;
+  engineBestMoveSan?: string;
+  explanation: string;
+  keyTacticalRisk?: string;
+  alternativeBetterLines?: string[];
+  source: 'gemini' | 'local_fallback';
+}
+
+export interface CoachServerStatusResponse {
+  configured: boolean;
+  model: string;
+  provider: string;
+  serverTime: string;
+}
+
 /**
  * Adapter interface for future Cloud AI integrations.
  * Allows seamless switching or mocking without coupling UI to a specific SDK.
@@ -69,4 +116,25 @@ export interface IAIProviderAdapter {
     onChunk: (chunk: string) => void,
     context?: AICoachPromptContext
   ): Promise<void>;
+  getProgressiveHint?(
+    fen: string,
+    objective: string,
+    stage: HintStage,
+    expectedMoveSan?: string,
+    exerciseCategory?: string
+  ): Promise<ProgressiveHintResponse>;
+  explainPosition?(
+    fen: string,
+    evaluation?: EngineEvaluation,
+    sideToMove?: ChessColor,
+    recentMovesSan?: string[]
+  ): Promise<CoachPositionExplanationResponse>;
+  explainMove?(
+    fenBefore: string,
+    fenAfter: string,
+    moveSan: string,
+    evalBefore?: EngineEvaluation,
+    evalAfter?: EngineEvaluation
+  ): Promise<CoachMoveExplanationResponse>;
 }
+

@@ -1281,6 +1281,63 @@ export const TRAINING_LESSONS: TrainingLesson[] = [
     },
   },
 
+  {
+    id: 'l-504-the-zwischenzug-intermediate-move',
+    moduleId: 'mod-9-deep-calculation',
+    levelId: 'level-5-expert',
+    order: 4,
+    title: 'The Zwischenzug: The In-Between Attack',
+    learningObjective: 'Master the art of the intermediate move (Zwischenzug) that shatters the opponent’s expected recapture sequence.',
+    difficulty: 'expert',
+    estimatedMinutes: 10,
+    content: {
+      introduction:
+        'A Zwischenzug (German for "in-between move") is an unexpected tactical intermezzo inserted into what looks like a forced sequence. Instead of playing the obvious recapture, you deliver a forcing check or attack that changes the evaluation entirely.',
+      sections: [
+        {
+          title: 'The Psychology of the Intermezzo',
+          paragraphs: [
+            'Most players calculate linearly: "If I attack his piece, he must move it or trade." A grandmaster searches for the third option: an in-between check that leaves the enemy helpless.',
+            'When Black attacks your Knight with a pawn push like ...d4, look for whether you can ignore the threat by launching an immediate check against the king.',
+          ],
+          diagramFen: 'r2q1rk1/ppp2p1p/2n2P2/8/3p4/2N5/PPP2PPP/R1BQK2R w KQ - 0 1',
+          diagramCaption: 'Black just attacked White’s c3 Knight with ...d4, expecting White to retreat.',
+        },
+      ],
+      keyTakeaways: [
+        'Never assume a sequence is forced: always check for intermediate checks and counter-attacks.',
+        'An in-between check with checkmate threats overrides any material loss on the other side of the board.',
+      ],
+    },
+    exercise: {
+      id: 'ex-504-zwischenzug-mate',
+      lessonId: 'l-504-the-zwischenzug-intermediate-move',
+      title: 'Exercise: Execute the Zwischenzug (Mate in 2)',
+      instruction: 'Ignore Black’s attack on your c3 Knight! Deliver check with Qg4+, and when the King steps to h8, deliver checkmate with Qg7#!',
+      exerciseType: 'checkmate',
+      initialFen: 'r2q1rk1/ppp2p1p/2n2P2/8/3p4/2N5/PPP2PPP/R1BQK2R w KQ - 0 1',
+      playerSide: 'w',
+      steps: [
+        {
+          playerMoveSan: 'Qg4+',
+          opponentReplySan: 'Kh8',
+          explanation: 'Lethal intermediate attack! The King is forced to h8 with no pieces able to block.',
+        },
+        {
+          playerMoveSan: 'Qg7#',
+          explanation: 'Checkmate! The Queen delivers mate on g7 protected by the advanced pawn on f6.',
+        },
+      ],
+      hint: 'Bring your Queen to g4 with check instead of saving the c3 knight.',
+      explanation: '1.Qg4+ Kh8 2.Qg7# completely refutes Black’s premature pawn advance with a decisive mating attack.',
+      difficulty: 'expert',
+    },
+    completionCriteria: {
+      requiresExercisePassed: true,
+      requiresReadingCompleted: true,
+    },
+  },
+
   // ==========================================
   // LEVEL 6: MASTER
   // ==========================================
@@ -1428,6 +1485,58 @@ export const TRAINING_LESSONS: TrainingLesson[] = [
       ],
       hint: 'Check with Rc8+, then follow up with Rh8+ directly in Black’s face.',
       explanation: '1.Rc8+ Kh7 2.Rh8+! is the classic desperado sacrifice: capturing it produces immediate stalemate, saving the draw!',
+      difficulty: 'master',
+    },
+    completionCriteria: {
+      requiresExercisePassed: true,
+      requiresReadingCompleted: true,
+    },
+  },
+
+  {
+    id: 'l-604-the-minority-attack-carlsbad',
+    moduleId: 'mod-11-master-strategy',
+    levelId: 'level-6-master',
+    order: 4,
+    title: 'The Minority Attack: Carlsbad Structure Mastery',
+    learningObjective: 'Execute the classical minority attack (b4-b5) in the Carlsbad structure to saddle Black with a permanent backward c6 pawn.',
+    difficulty: 'master',
+    estimatedMinutes: 11,
+    content: {
+      introduction:
+        'The Minority Attack is one of the most famous long-term strategic plans in chess. White uses two queenside pawns (a- and b-pawns) to attack Black’s three pawns (a-, b-, and c-pawns), intentionally provoking structural weaknesses.',
+      sections: [
+        {
+          title: 'Creating the Backward c6 Pawn',
+          paragraphs: [
+            'By pushing b4-b5, White forces Black to either take on b5 (isolating Black’s d5 pawn) or allow White to capture on c6, leaving Black with a weak, backward c6 pawn on an open file.',
+            'White’s rooks then target the backward c6 pawn for the remainder of the game.',
+          ],
+          diagramFen: 'r1r3k1/pp1b1ppp/2n1pn2/3p4/1P1P4/P1N1PN2/1Q2BPPP/R4RK1 w - - 0 1',
+          diagramCaption: 'White is fully harmonized and ready to unleash the minority lever b4-b5.',
+        },
+      ],
+      keyTakeaways: [
+        'The minority attack uses fewer pawns to destroy a larger enemy pawn formation.',
+        'Target the backward pawn created along the semi-open c-file with rooks and heavy pieces.',
+      ],
+    },
+    exercise: {
+      id: 'ex-604-minority-lever',
+      lessonId: 'l-604-the-minority-attack-carlsbad',
+      title: 'Exercise: Launch the Minority Attack',
+      instruction: 'Advance your pawn to b5 to strike Black’s c6 pawn and initiate the structural breakdown of the queenside.',
+      exerciseType: 'best_move',
+      initialFen: 'r1r3k1/pp1b1ppp/2n1pn2/3p4/1P1P4/P1N1PN2/1Q2BPPP/R4RK1 w - - 0 1',
+      playerSide: 'w',
+      steps: [
+        {
+          playerMoveSan: 'b5',
+          explanation: 'Classic master technique! 1.b5 strikes directly at the heart of Black’s pawn chain.',
+        },
+      ],
+      hint: 'Push your b4 pawn forward to b5.',
+      explanation: 'b5 is the thematic minority attack break, guaranteeing a permanent positional advantage against Black’s queenside.',
       difficulty: 'master',
     },
     completionCriteria: {
@@ -1586,118 +1695,6 @@ export const TRAINING_LESSONS: TrainingLesson[] = [
     },
   },
 
-  // --- LEVEL 5 EXPANSION ---
-  {
-    id: 'l-504-the-zwischenzug-intermediate-move',
-    moduleId: 'mod-9-deep-calculation',
-    levelId: 'level-5-expert',
-    order: 4,
-    title: 'The Zwischenzug: The In-Between Attack',
-    learningObjective: 'Master the art of the intermediate move (Zwischenzug) that shatters the opponent’s expected recapture sequence.',
-    difficulty: 'expert',
-    estimatedMinutes: 10,
-    content: {
-      introduction:
-        'A Zwischenzug (German for "in-between move") is an unexpected tactical intermezzo inserted into what looks like a forced sequence. Instead of playing the obvious recapture, you deliver a forcing check or attack that changes the evaluation entirely.',
-      sections: [
-        {
-          title: 'The Psychology of the Intermezzo',
-          paragraphs: [
-            'Most players calculate linearly: "If I attack his piece, he must move it or trade." A grandmaster searches for the third option: an in-between check that leaves the enemy helpless.',
-            'When Black attacks your Knight with a pawn push like ...d4, look for whether you can ignore the threat by launching an immediate check against the king.',
-          ],
-          diagramFen: 'r2q1rk1/ppp2p1p/2n2P2/8/3p4/2N5/PPP2PPP/R1BQK2R w KQ - 0 1',
-          diagramCaption: 'Black just attacked White’s c3 Knight with ...d4, expecting White to retreat.',
-        },
-      ],
-      keyTakeaways: [
-        'Never assume a sequence is forced: always check for intermediate checks and counter-attacks.',
-        'An in-between check with checkmate threats overrides any material loss on the other side of the board.',
-      ],
-    },
-    exercise: {
-      id: 'ex-504-zwischenzug-mate',
-      lessonId: 'l-504-the-zwischenzug-intermediate-move',
-      title: 'Exercise: Execute the Zwischenzug (Mate in 2)',
-      instruction: 'Ignore Black’s attack on your c3 Knight! Deliver check with Qg4+, and when the King steps to h8, deliver checkmate with Qg7#!',
-      exerciseType: 'checkmate',
-      initialFen: 'r2q1rk1/ppp2p1p/2n2P2/8/3p4/2N5/PPP2PPP/R1BQK2R w KQ - 0 1',
-      playerSide: 'w',
-      steps: [
-        {
-          playerMoveSan: 'Qg4+',
-          opponentReplySan: 'Kh8',
-          explanation: 'Lethal intermediate attack! The King is forced to h8 with no pieces able to block.',
-        },
-        {
-          playerMoveSan: 'Qg7#',
-          explanation: 'Checkmate! The Queen delivers mate on g7 protected by the advanced pawn on f6.',
-        },
-      ],
-      hint: 'Bring your Queen to g4 with check instead of saving the c3 knight.',
-      explanation: '1.Qg4+ Kh8 2.Qg7# completely refutes Black’s premature pawn advance with a decisive mating attack.',
-      difficulty: 'expert',
-    },
-    completionCriteria: {
-      requiresExercisePassed: true,
-      requiresReadingCompleted: true,
-    },
-  },
-
-  // --- LEVEL 6 EXPANSION ---
-  {
-    id: 'l-604-the-minority-attack-carlsbad',
-    moduleId: 'mod-11-master-strategy',
-    levelId: 'level-6-master',
-    order: 4,
-    title: 'The Minority Attack: Carlsbad Structure Mastery',
-    learningObjective: 'Execute the classical minority attack (b4-b5) in the Carlsbad structure to saddle Black with a permanent backward c6 pawn.',
-    difficulty: 'master',
-    estimatedMinutes: 11,
-    content: {
-      introduction:
-        'The Minority Attack is one of the most famous long-term strategic plans in chess. White uses two queenside pawns (a- and b-pawns) to attack Black’s three pawns (a-, b-, and c-pawns), intentionally provoking structural weaknesses.',
-      sections: [
-        {
-          title: 'Creating the Backward c6 Pawn',
-          paragraphs: [
-            'By pushing b4-b5, White forces Black to either take on b5 (isolating Black’s d5 pawn) or allow White to capture on c6, leaving Black with a weak, backward c6 pawn on an open file.',
-            'White’s rooks then target the backward c6 pawn for the remainder of the game.',
-          ],
-          diagramFen: 'r1r3k1/pp1b1ppp/2n1pn2/3p4/1P1P4/P1N1PN2/1Q2BPPP/R4RK1 w - - 0 1',
-          diagramCaption: 'White is fully harmonized and ready to unleash the minority lever b4-b5.',
-        },
-      ],
-      keyTakeaways: [
-        'The minority attack uses fewer pawns to destroy a larger enemy pawn formation.',
-        'Target the backward pawn created along the semi-open c-file with rooks and heavy pieces.',
-      ],
-    },
-    exercise: {
-      id: 'ex-604-minority-lever',
-      lessonId: 'l-604-the-minority-attack-carlsbad',
-      title: 'Exercise: Launch the Minority Attack',
-      instruction: 'Advance your pawn to b5 to strike Black’s c6 pawn and initiate the structural breakdown of the queenside.',
-      exerciseType: 'best_move',
-      initialFen: 'r1r3k1/pp1b1ppp/2n1pn2/3p4/1P1P4/P1N1PN2/1Q2BPPP/R4RK1 w - - 0 1',
-      playerSide: 'w',
-      steps: [
-        {
-          playerMoveSan: 'b5',
-          explanation: 'Classic master technique! 1.b5 strikes directly at the heart of Black’s pawn chain.',
-        },
-      ],
-      hint: 'Push your b4 pawn forward to b5.',
-      explanation: 'b5 is the thematic minority attack break, guaranteeing a permanent positional advantage against Black’s queenside.',
-      difficulty: 'master',
-    },
-    completionCriteria: {
-      requiresExercisePassed: true,
-      requiresReadingCompleted: true,
-    },
-  },
-
-  // --- LEVEL 7 EXPANSION ---
   {
     id: 'l-704-converting-plus-equals-endgame',
     moduleId: 'mod-14-critical-decisions',

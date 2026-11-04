@@ -1,6 +1,10 @@
 /**
- * Training curriculum, lesson progressions, and Test Arena evaluation reports.
+ * Canonical curriculum domain types, lesson progressions, and Test Arena evaluation reports.
+ * Unifies TASK 01 foundation contracts and TASK 05 Training Academy contracts.
  */
+
+// Re-export all canonical Training Academy types as single source of truth
+export * from '../features/training/types';
 
 export type LessonDifficulty = 'novice' | 'intermediate' | 'advanced' | 'master';
 export type LessonCategory = 'fundamentals' | 'tactics' | 'openings' | 'strategy' | 'endgames';
@@ -52,3 +56,4 @@ export interface ArenaEvaluationReport {
   suggestedFocusLessons: string[];
   createdAt: string;
 }
+

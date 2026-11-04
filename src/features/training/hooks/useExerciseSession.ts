@@ -1,9 +1,17 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { Square } from 'chess.js';
 import { Chess } from 'chess.js';
+import type { MoveRecord } from '../../../types/chess';
 import { ExerciseValidator } from '../models/exerciseValidator';
 import type { ChessExercise } from '../types';
 import { playChessClick, playChime } from '../../../utils/sound';
+
+export interface ExerciseAttemptNotification {
+  success: boolean;
+  sanPlayed: string;
+  isIllegal: boolean;
+  feedbackMessage: string;
+}
 
 export interface ExerciseSessionState {
   currentFen: string;
@@ -16,12 +24,15 @@ export interface ExerciseSessionState {
   showHint: boolean;
   pendingPromotion: { from: string; to: string } | null;
   attemptsCount: number;
+  moveHistorySan: string[];
+  moveHistory: MoveRecord[];
 }
 
 export function useExerciseSession(
   exercise: ChessExercise,
   soundEnabled: boolean = true,
-  onExerciseComplete?: () => void
+  onExerciseComplete?: () => void,
+  onAttemptRecorded?: (attempt: ExerciseAttemptNotification) => void
 ) {
   const [fen, setFen] = useState<string>(exercise.initialFen);
   const [stepIndex, setStepIndex] = useState<number>(0);
@@ -32,6 +43,8 @@ export function useExerciseSession(
   const [showHint, setShowHint] = useState<boolean>(false);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string } | null>(null);
   const [attemptsCount, setAttemptsCount] = useState<number>(0);
+  const [moveHistorySan, setMoveHistorySan] = useState<string[]>([]);
+  const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
 
   // Reset state when exercise changes
   useEffect(() => {
@@ -44,6 +57,8 @@ export function useExerciseSession(
     setShowHint(false);
     setPendingPromotion(null);
     setAttemptsCount(0);
+    setMoveHistorySan([]);
+    setMoveHistory([]);
   }, [exercise.id, exercise.initialFen]);
 
   const legalMovesForSelected = useMemo(() => {
@@ -83,7 +98,10 @@ export function useExerciseSession(
           !promotionPiece
         ) {
           const targetRank = to[1];
-          if ((exercise.playerSide === 'w' && targetRank === '8') || (exercise.playerSide === 'b' && targetRank === '1')) {
+          if (
+            (exercise.playerSide === 'w' && targetRank === '8') ||
+            (exercise.playerSide === 'b' && targetRank === '1')
+          ) {
             setPendingPromotion({ from, to });
             return false;
           }
@@ -109,6 +127,12 @@ export function useExerciseSession(
         setStatus('incorrect');
         setFeedback(result.feedbackMessage);
         playChessClick(soundEnabled, 0.5);
+        onAttemptRecorded?.({
+          success: false,
+          sanPlayed: '',
+          isIllegal: true,
+          feedbackMessage: result.feedbackMessage,
+        });
         return false;
       }
 
@@ -116,11 +140,36 @@ export function useExerciseSession(
         setStatus('incorrect');
         setFeedback(result.feedbackMessage);
         playChessClick(soundEnabled, 0.4);
+        onAttemptRecorded?.({
+          success: false,
+          sanPlayed: result.sanPlayed,
+          isIllegal: false,
+          feedbackMessage: result.feedbackMessage,
+        });
         return false;
       }
 
-      // Valid and correct!
-      setLastMove({ from, to });
+      // Valid and correct player move!
+      const newSanMoves: string[] = [result.sanPlayed];
+      const newRecords: MoveRecord[] = [];
+      if (result.playerMoveRecord) {
+        newRecords.push(result.playerMoveRecord);
+      }
+
+      // If opponent replied, record opponent move and update lastMove to opponent's move
+      if (result.opponentReply && result.opponentMoveRecord) {
+        newSanMoves.push(result.opponentReply.san);
+        newRecords.push(result.opponentMoveRecord);
+        setLastMove({
+          from: result.opponentReply.from,
+          to: result.opponentReply.to,
+        });
+      } else {
+        setLastMove({ from, to });
+      }
+
+      setMoveHistorySan((prev) => [...prev, ...newSanMoves]);
+      setMoveHistory((prev) => [...prev, ...newRecords]);
       setFen(result.nextFen);
       setStepIndex(result.currentStepIndex);
 
@@ -128,6 +177,12 @@ export function useExerciseSession(
         setStatus('completed');
         setFeedback(result.feedbackMessage);
         playChime(soundEnabled, 0.7);
+        onAttemptRecorded?.({
+          success: true,
+          sanPlayed: result.sanPlayed,
+          isIllegal: false,
+          feedbackMessage: result.feedbackMessage,
+        });
         onExerciseComplete?.();
       } else {
         setStatus('correct');
@@ -137,7 +192,7 @@ export function useExerciseSession(
 
       return true;
     },
-    [fen, stepIndex, exercise, soundEnabled, onExerciseComplete]
+    [fen, stepIndex, exercise, soundEnabled, onExerciseComplete, onAttemptRecorded]
   );
 
   // Handle square click for click-to-move
@@ -193,6 +248,8 @@ export function useExerciseSession(
     setLastMove(null);
     setShowHint(false);
     setPendingPromotion(null);
+    setMoveHistorySan([]);
+    setMoveHistory([]);
     playChessClick(soundEnabled, 0.4);
   }, [exercise.initialFen, soundEnabled]);
 
@@ -214,6 +271,8 @@ export function useExerciseSession(
     showHint,
     pendingPromotion,
     attemptsCount,
+    moveHistorySan,
+    moveHistory,
     setPendingPromotion,
     commitMove,
     handleSquareClick,
@@ -221,3 +280,4 @@ export function useExerciseSession(
     toggleHint,
   };
 }
+

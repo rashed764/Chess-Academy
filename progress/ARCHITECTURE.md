@@ -116,29 +116,68 @@ Level (7 levels: Absolute Beginner to Grandmaster Preparation)
 ### Models & Logic Separation
 1. **`ExerciseValidator` (`src/features/training/models/exerciseValidator.ts`)**:
    - Pure, headless domain validator wrapping `chess.js`.
-   - Validates legal moves against target solutions (SAN or UCI notation).
+   - Validates legal moves against target solutions using position-aware legal move resolution (`playSanOrUci` and `doesMoveMatchTarget`).
+   - Supports both SAN and UCI coordinate notation matched against verbose legal moves from `chess.js`.
+   - Exposes `OpponentReplyDetails` (`from`, `to`, `san`, `uci`) on counter-moves for board square highlighting.
+   - Generates typed `playerMoveRecord` and `opponentMoveRecord` with before/after FEN and move parameters.
    - Supports multi-move puzzles by progressing through steps, automatically executing opponent counter-moves, and validating the final refutation.
    - Allows acceptable alternative moves (`alternativeMoves`).
-2. **`UnlockEngine` (`src/features/training/models/unlockEngine.ts`)**:
+2. **`UnlockEngine` & Canonical Progression (`src/features/training/models/unlockEngine.ts`, `data/index.ts`)**:
    - Governs progression access rules.
    - Level 1 is unconditionally unlocked. Level N+1 requires completed lessons in Level N (`minCompletedLessonsRequired`).
+   - Explicit `CANONICAL_LESSON_IDS` array (30 lessons in exact pedagogical order across 7 levels and 14 modules) guarantees deterministic, symmetrical `getNextLesson` and `getPreviousLesson` traversal.
    - Lessons within an unlocked level unlock sequentially (or remain accessible once completed).
 3. **`ProgressStorage` (`src/features/training/models/progressStorage.ts`)**:
    - Manages LocalStorage synchronization (`chess_academy_training_progress_v1`).
-   - Calculates mathematical completion percentages dynamically.
-   - Logs timestamped learning activities (exercise attempts, lesson completions) into an auditable activity history journal.
+   - Tracks both successful and failed exercise attempts (`totalExerciseAttempts`, `incorrectExerciseAttempts`).
+   - Dynamically calculates accurate mathematical success rates (`(total - incorrect) / total * 100`).
+   - Logs timestamped learning activities (`exercise_completed`, `exercise_failed`, `lesson_completed`) into an auditable activity history journal with idempotency protection against duplicate spam.
+4. **Unified Type Contracts (`src/types/curriculum.ts` & `src/features/training/types.ts`)**:
+   - `src/features/training/types.ts` is the single source of truth for curriculum, exercise, and progress data structures.
+   - `src/types/curriculum.ts` serves as a clean re-export facade with downstream interfaces (`ArenaEvaluationReport`, `UserLessonProgress`) preventing circular dependencies or type duplication.
+5. **Session State & Real-Time Move History (`src/features/training/hooks/useExerciseSession.ts`)**:
+   - Maintains `moveHistorySan: string[]` and `moveHistory: MoveRecord[]` tracking every half-move in the exercise session.
+   - Exposes `lastMove` containing player move or opponent reply coordinates `{ from, to }` for board square highlighting.
+   - Notifies parent components via `onAttemptRecorded` callback with `ExerciseAttemptNotification` on every correct, incorrect, or illegal attempt.
+
 
 ---
 
-## 5. Master Task Roadmap Sequence
+## 5. AI Coach Intelligence Architecture (TASK 06)
+
+1. **Hybrid Architecture Principle**:
+   - **Stockfish WASM + chess.js = Chess Truth**: Engine calculations, numerical centipawn evaluations, forced mate detection, and move legality are strictly authoritative. The LLM never declares best moves or evaluations without Stockfish verification.
+   - **Google GenAI (Gemini 3.8 Flash via `@google/genai`) = Educational Explanation**: Generates nuanced explanations, tactical breakdowns, and progressive hints.
+2. **Server-Side Security & Rate Limiting (`src/server/`)**:
+   - Express server (`server.ts`) hosting API routes at `/api/coach`.
+   - `GEMINI_API_KEY` is loaded strictly on the server and is never sent to the browser or exposed in client bundles.
+   - Per-IP in-memory token bucket rate limiter (60 requests/minute) protects against endpoint abuse.
+   - Strict input validation via `src/server/validators.ts`: FEN validation using `chess.js`, move legality checking, hint stage restriction (1, 2, 3), and text length bounds.
+3. **Progressive Hint Engine (`generateCoachHint`)**:
+   - Three pedagogical hint stages:
+     - **Stage 1 (Direction/Nudge)**: Points to relevant board sector or piece vulnerability without naming pieces or moves.
+     - **Stage 2 (Tactical Motif)**: Explains the underlying tactical motif (pin, fork, skewer, deflection) and why it works.
+     - **Stage 3 (Concrete Idea)**: Directs calculation to forcing candidate moves and key squares.
+   - Protected against prompt injection by separating system instructions from untrusted user text.
+   - Does NOT increment exercise attempt counters or auto-solve puzzles.
+4. **Move Quality Classification (`classifyMoveQuality`)**:
+   - Compares centipawn evaluations before and after moves from the active mover's perspective.
+   - 7 canonical tiers: `brilliant` (sound tactical sacrifices), `best` (loss <= 10 cp or matches engine best move), `good` (loss <= 30 cp), `inaccuracy` (loss <= 90 cp), `mistake` (loss <= 200 cp), `blunder` (loss > 200 cp or mate blunder), and `unclassified` (when evaluation is pending).
+5. **Deterministic Local Fallback**:
+   - When offline or when `GEMINI_API_KEY` is unconfigured, all endpoints return high-quality deterministic responses derived genuinely from exercise data, tagged with `source: 'local_fallback'`.
+
+---
+
+## 6. Master Task Roadmap Sequence
 
 1. **TASK 01 — Foundation & Project Setup** (COMPLETED)
 2. **TASK 02 — Premium UI & Dashboard** (COMPLETED)
 3. **TASK 03 — Chess Engine Integration** (COMPLETED)
 4. **TASK 04 — Quick Match** (COMPLETED)
 5. **TASK 05 — Training Academy** (COMPLETED)
-6. **TASK 06 — AI Coach Intelligence** (NEXT)
-7. **TASK 07 — Test Arena**
+6. **TASK 06 — AI Coach Intelligence** (COMPLETED)
+7. **TASK 07 — Test Arena** (NEXT)
 8. **TASK 08 — Personalized Learning Engine**
 9. **TASK 09 — Backend & Cloud Synchronization**
 10. **TASK 10 — Testing & Production**
+

@@ -1,47 +1,60 @@
-# Current Task: TASK 05 — Training Academy (Post-Corrective Audit)
+# Current Task: TASK 06 — AI Coach Intelligence
 
-## Status: COMPLETED & AUDITED
+## Status: COMPLETED
 
 ### Objective
-Perform an exhaustive educational accuracy audit, exercise solution verification, and progression reliability audit for TASK 05 — Training Academy. Ensure every single exercise position, expected solution, and multi-move branch across all 7 levels is tactically, strategically, and deterministically valid in `chess.js`, resolve prerequisite thresholds, prevent history inflation, and verify persistence and recovery.
+Implement production-grade AI Coach Intelligence based on the Hybrid Architecture Principle:
+- **Chess Truth**: Stockfish WASM and chess.js strictly govern legal moves, evaluations, best moves, and mate calculations.
+- **Educational Explanation**: Gemini 3.8 Flash via `@google/genai` (with graceful deterministic local fallback) explains positions, moves, tactical motifs, and 3-stage progressive hints.
 
 ---
 
-### Key Audit Deliverables & Corrective Actions Executed
+### Executed Deliverables
 
-1. **Exercise Tactical & Strategic Correctness Audit (30 Exercises Verified)**:
-   - **Pawn Promotion (`ex-103-pawn-promotion`)**: Repaired FEN from an edge King configuration that failed to give check to textbook checkmate position `6k1/4P3/6K1/8/8/8/8/8 w - - 0 1`, where both `e8=Q#` and `e8=R#` are verified, deterministic checkmates in `chess.js`.
-   - **Knight Fork Capture (`ex-203-knight-fork-c7`)**: Corrected move expectation to `Nxc7+` with capture notation and added alternative SAN tolerance; updated `ExerciseValidator` to normalize captures `x` and checks so notation mismatches never reject a valid move.
-   - **Lucena Rook Bridge (`ex-403-lucena-bridge`)**: Repaired FEN from an erroneous a-pawn edge configuration to the textbook e-pawn Lucena position `4K3/4P3/3k4/8/8/8/r7/5R2 w - - 0 1` with move `Rf4` establishing the 4th-rank shield against rear checks.
-   - **Desperado Rook Swindle (`ex-603-desperado-swindle`)**: Repaired FEN from an open queen position to `7k/2R3p1/8/8/8/1q6/8/K7 w - - 0 1`, where White plays `1.Rc8+ Kh7 2.Rh8+!` and `2...Kxh8` produces a 100% genuine stalemate.
-   - **Curriculum Expansion**: Added 3 deeply pedagogical master-level lessons with verified exercises:
-     - Level 5 Expert: `l-504-the-zwischenzug-intermediate-move` (Mate in 2: `1.Qg4+ Kh8 2.Qg7#`).
-     - Level 6 Master: `l-604-the-minority-attack-carlsbad` (The Carlsbad minority lever `b4-b5`).
-     - Level 7 Grandmaster Prep: `l-704-converting-plus-equals-endgame` (Prophylactic King march `Kg4`).
+1. **Secure Express Backend & Gemini Integration**:
+   - `server.ts`: Express server running on port 3000, mounting `/api/coach` router and Vite middleware in dev, static dist in production.
+   - `src/server/geminiClient.ts`: Server-side initialization using `@google/genai` with `User-Agent: aistudio-build`. `GEMINI_API_KEY` is strictly server-side.
+   - `src/server/rateLimiter.ts`: In-memory token bucket rate limiter protecting all coach endpoints (60 req/min).
+   - `src/server/validators.ts`: Input validation for chess FENs (`chess.js`), hint stages (1, 2, 3), move legality, and text lengths.
+   - `src/server/coachService.ts`: Core intelligence handlers:
+     - `classifyMoveQuality`: 7 classifications (`brilliant`, `best`, `good`, `inaccuracy`, `mistake`, `blunder`, `unclassified`) based on mover's perspective and centipawn drop.
+     - `generateCoachHint`: Progressive 3 stages (Direction, Tactical Motif, Concrete Idea), prompt injection resistant, deterministic offline fallback.
+     - `explainPosition`: Positional breakdown, tactical opportunities, and strategic advice anchored in Stockfish WASM evaluation.
+     - `explainMove`: Centipawn-aware explanation of played moves.
+     - `chatWithCoach`: Pedagogical chess conversational agent.
+   - `src/server/coachRouter.ts`: Endpoints:
+     - `GET /api/coach/status`
+     - `POST /api/coach/hint`
+     - `POST /api/coach/explain-position`
+     - `POST /api/coach/explain-move`
+     - `POST /api/coach/chat`
 
-2. **Progression Gating & Level Threshold Calibration**:
-   - Re-calibrated `minCompletedLessonsRequired: 3` for Levels 3 through 7 (75% mastery of preceding 4-lesson tiers), eliminating impossible prerequisite gates.
-   - Verified that Level 1 is unlocked by default and Levels 2–7 unlock only when learners reach required completion milestones.
-   - Enforced route protection: direct URL navigation to locked lessons (`?lesson=<lockedId>`) automatically clears search params and redirects to the curriculum hub.
+2. **Client-Side Coach Integration**:
+   - `src/services/ai/coachClient.ts`: Type-safe client with 15s timeout and 2x bounded exponential backoff retries.
+   - `src/services/ai/adapter.ts`: Updated `ServerAICoachAdapter` implementing `IAIProviderAdapter`.
+   - `src/features/coach/hooks/useAICoach.ts`: Custom hook managing hint progression, position analysis, move explanation, and dialogue.
+   - `src/features/coach/components/MoveQualityBadge.tsx`: Visual badge for move quality with centipawn loss indicators.
+   - `src/features/coach/components/CoachPanel.tsx`: Reusable dark luxury salon panel with Hints, Position Analysis, and Dialogue tabs.
 
-3. **Progress Tracking & Persistence Reliability**:
-   - **Zero Duplicate History Inflation**: Updated `ProgressStorage.recordLessonCompletion` to check `isAlreadyCompleted` and return early without duplicate completion records or history spam when revisiting lessons.
-   - **Real Browser Persistence**: Tested in headless Chromium: completed Lesson 1, reloaded browser, verified lesson remained completed, Level 1 progress remained 1/6 (17%), Lesson 2 remained unlocked, and activity history was preserved.
-   - **Corrupt Storage Recovery**: Injected malformed/invalid JSON into `chess_academy_training_progress_v1`; verified that `ProgressStorage` safely catches parse exceptions and falls back to `INITIAL_PROGRESS_STATE` with zero app crashes.
+3. **UI Integration & Boundary Preservation**:
+   - Integrated `CoachPanel` into `LessonRoom.tsx`: Provides 3-stage progressive hints without incrementing exercise attempt counters or auto-solving puzzles.
+   - Integrated `CoachPanel` into `AnalysisPage.tsx`: Provides GM positional intelligence alongside live Stockfish WASM evaluation.
+   - Preserved `Quick Match` entirely independent and unassisted.
 
 ---
 
-### Executed Verifications
-- **Production Compilation (`compile_applet`)**: Succeeded.
-- **TypeScript Static Verification (`lint_applet` / `tsc --noEmit`)**: Succeeded (0 errors, 0 warnings).
-- **Unit Test Suite (`npm test`)**: **57 passed, 0 failed** across all test suites (including 17 curriculum, pedagogical correctness, Lucena bridge, Desperado stalemate, and progress storage tests).
+### Verification Summary
+- **Unit Tests (`npm test`)**: **72/72 tests passed** (100% pass rate, covering security, input validation, chess truth, move classification, hint progression, rate limiting, and all prior regression tests).
+- **TypeScript Static Verification (`tsc --noEmit`)**: **PASS (0 errors, 0 warnings)**.
+- **Production Build (`npm run build`)**: **PASS (Build succeeded)**.
 - **Browser Playwright Verification**:
-  - Full automated run across all 7 levels confirming acceptance of correct moves and rejection of incorrect moves with didactic messages.
-  - Page reload persistence verified.
-  - Locked lesson URL route protection verified.
-  - Malformed localStorage recovery verified.
+  - Live inspection in Chromium verified CoachPanel in LessonRoom.
+  - Progressive hint stages 1 and 2 triggered and displayed cleanly.
+  - Verified attempt counters remained at 0 while viewing hints.
+  - Verified AnalysisPage position explanation.
+  - Verified Quick Match setup and engine duel remained completely functional.
 
 ---
 
 ### Next Task
-- **TASK 06 — AI Coach Intelligence**: Cloud AI coach service with Google GenAI / Gemini API, move evaluation explanations, tactical blunder warnings, and conversational chess guidance.
+- **TASK 07 — Test Arena** (Awaiting explicit user authorization before starting).

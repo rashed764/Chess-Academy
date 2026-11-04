@@ -8,14 +8,20 @@
 | **MultiPV & BestMove Consistency** | Best move / Line 1 leading move agreement | **RESOLVED in Task 03 Audit** | MultiPV 1 strictly isolated from auxiliary lines; lines sorted numerically; Best Move guaranteed consistent with PV Line 1. |
 | **Interactive Board Engine** | Quick Match interactive gameplay and clocks | **RESOLVED in Task 04** | Fully playable Quick Match against Stockfish WASM with drag-and-drop, click-to-move, pawn promotion, and precision clock. |
 | **Training Academy Curriculum** | 7 levels, interactive exercises & progress tracking | **RESOLVED in Task 05** | 7-level curriculum with 14 modules, pure `chess.js` exercise validator, dual study/exercise lesson room, unlock engine, and local progress journal. |
-| **Cloud AI Coaching** | Server-side Gemini API adapter unconfigured. | Low (Expected in Task 05) | `UnconfiguredAIAdapter` guards calls with explicit errors. Scheduled for **TASK 06: AI Coach Intelligence**. |
-| **Supabase Cloud Sync** | Supabase project is not yet provisioned. | Low (Expected in Task 05) | Safe boundary check returns `null`. Works out-of-the-box in local preview mode. Scheduled for **TASK 09: Backend & Cloud Synchronization**. |
+| **Curriculum Traversal & Ordering** | Level leaps on navigation (`l-504`, `l-604`, `l-704`) | **RESOLVED in Task 05 Recovery** | Explicit `CANONICAL_LESSON_IDS` array guarantees deterministic, symmetrical forward/backward navigation across all 30 lessons. |
+| **Exercise Attempt Accounting** | Failed attempts not recorded; success rate skew | **RESOLVED in Task 05 Recovery** | `useExerciseSession` notifies `onAttemptRecorded`; `incorrectExerciseAttempts` and real success rates tracked accurately. |
+| **Opponent Move Highlighting** | Counter-moves had no coordinate exposure | **RESOLVED in Task 05 Recovery** | `MoveAttemptResult` exposes `opponentReplyDetails`; `ExerciseBoard` highlights opponent move squares. |
+| **Curriculum Type Contracts** | Duplicated diverging interfaces | **RESOLVED in Task 05 Recovery** | `src/types/curriculum.ts` re-exports canonical types from `src/features/training/types.ts`. |
+| **Position-Aware Move Matching** | Raw string stripping could misinterpret notations | **RESOLVED in Task 05 Recovery** | `playSanOrUci` and `doesMoveMatchTarget` resolve legal moves against `chess.moves({ verbose: true })`. |
+| **Cloud AI Coaching** | Server-side Gemini API adapter unconfigured | **RESOLVED in Task 06** | Express backend `/api/coach` endpoints with Gemini 3.8 Flash, rate limiting, FEN validation, 3-stage progressive hints, move classification, and offline fallback. |
+| **Supabase Cloud Sync** | Supabase project is not yet provisioned. | Low (Expected in Task 06) | Safe boundary check returns `null`. Works out-of-the-box in local preview mode. Scheduled for **TASK 09: Backend & Cloud Synchronization**. |
 | **Hot Module Replacement (HMR)** | HMR disabled by container policy (`DISABLE_HMR=true`). | Environment | Dev server restarted after code updates. |
 
 ---
 
 ## Technical Debt & Boundary Guardrails
 - **Zero Pseudo-Technical Clutter**: UI remains strictly chess-first without artificial telemetry, mock compiler badges, or synthetic rating awards.
-- **Accurate Chess Integrity**: No fabricated FIDE accreditation, master titles, or guaranteed progression promises.
-- **Strict Scope Separation**: Only Tasks 01–05 scope implemented; no premature AI Coach or Test Arena implementation added.
-- **Purely Optional Credentials**: No credentials required to preview or run the application.
+- **Accurate Chess Integrity**: No fabricated FIDE accreditation, master titles, or guaranteed progression promises. Stockfish WASM and chess.js are the sole authority for chess truth.
+- **Strict Scope Separation**: Only Tasks 01–06 scope implemented; no premature Test Arena implementation added.
+- **Purely Optional Credentials**: No credentials required to preview or run the application. Deterministic local fallbacks provide full functionality even without `GEMINI_API_KEY`.
+

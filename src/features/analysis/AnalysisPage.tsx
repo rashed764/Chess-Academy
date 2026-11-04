@@ -18,6 +18,7 @@ import type { EngineEvaluation } from '../../types/chess';
 import type { EngineStatus } from '../../services/chess/types';
 import { useAppStore } from '../../stores/useAppStore';
 import { playChessClick, playChime } from '../../utils/sound';
+import { CoachPanel } from '../coach/components/CoachPanel';
 
 export const AnalysisPage: React.FC = () => {
   const { currentProfile } = useAppStore();
@@ -276,7 +277,15 @@ export const AnalysisPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* AI Coach Positional Intelligence */}
+          <CoachPanel
+            mode="analysis"
+            fen={fenInput}
+            engineEvaluation={evaluation}
+          />
         </div>
+
 
         {/* Right: Engine Calculation & Evaluation Bar */}
         <div className="lg:col-span-5 space-y-6">

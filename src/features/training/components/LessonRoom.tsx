@@ -22,6 +22,7 @@ import { useExerciseSession } from '../hooks/useExerciseSession';
 import { getPreviousLesson, getNextLesson } from '../data';
 import { PromotionModal } from '../../quick-match/components/PromotionModal';
 import { useAppStore } from '../../../stores/useAppStore';
+import { CoachPanel } from '../../coach/components/CoachPanel';
 
 interface LessonRoomProps {
   lesson: TrainingLesson;
@@ -55,8 +56,10 @@ export const LessonRoom: React.FC<LessonRoomProps> = ({
     lesson.exercise,
     soundEnabled,
     () => {
-      onRecordExerciseAttempt(lesson, true);
       onCompleteLesson(lesson);
+    },
+    (attempt) => {
+      onRecordExerciseAttempt(lesson, attempt.success);
     }
   );
 
@@ -287,8 +290,21 @@ export const LessonRoom: React.FC<LessonRoomProps> = ({
 
         {/* Right Column: Side Guide & Navigation Panel */}
         <div className="lg:col-span-4 space-y-5">
+          {/* AI Coach Intelligence Panel */}
+          <CoachPanel
+            mode="training"
+            fen={exerciseSession.fen}
+            objective={lesson.exercise.instruction}
+            expectedMoveSan={lesson.exercise.steps[exerciseSession.stepIndex]?.playerMoveSan}
+            exerciseCategory={lesson.exercise.exerciseType}
+            userColor={lesson.exercise.playerSide}
+            recentMovesSan={exerciseSession.moveHistorySan}
+          />
+
+
           {/* Objective Summary Card */}
           <div className="rounded-2xl border border-[#242938] bg-[#10121B] p-5 space-y-4">
+
             <h4 className="text-xs font-mono uppercase tracking-wider text-[#9297A5] font-bold">
               Lesson Objectives
             </h4>
@@ -330,6 +346,20 @@ export const LessonRoom: React.FC<LessonRoomProps> = ({
                 <span>Attempts this session:</span>
                 <span className="text-[#F4F4F5]">{exerciseSession.attemptsCount}</span>
               </div>
+              {exerciseSession.moveHistorySan.length > 0 && (
+                <div className="pt-2 border-t border-[#242938]">
+                  <span className="text-[10px] text-[#9297A5] uppercase tracking-wider block mb-1">
+                    Moves Played:
+                  </span>
+                  <div className="flex flex-wrap gap-1 font-mono text-[11px] text-[#D6B36A]">
+                    {exerciseSession.moveHistorySan.map((san, sIdx) => (
+                      <span key={sIdx} className="px-1.5 py-0.5 rounded bg-[#171A24] border border-[#242938]">
+                        {sIdx % 2 === 0 ? `${Math.floor(sIdx / 2) + 1}. ` : ''}{san}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

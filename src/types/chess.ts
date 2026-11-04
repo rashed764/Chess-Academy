@@ -37,6 +37,7 @@ export interface MoveRecord {
   san: string;
   from: string;
   to: string;
+  uci?: string;
   piece: PieceSymbol;
   color: ChessColor;
   captured?: PieceSymbol;
