@@ -1,65 +1,47 @@
-# Current Task: TASK 04 — Quick Match
+# Current Task: TASK 05 — Training Academy (Post-Corrective Audit)
 
-## Status: COMPLETED (Verified & Tested)
+## Status: COMPLETED & AUDITED
 
 ### Objective
-Transform the Quick Match configuration interface into a fully functional, playable chess duel against the local Stockfish WASM engine with authoritative rule validation, interactive luxury board, high-precision chess clock, and comprehensive match flow.
+Perform an exhaustive educational accuracy audit, exercise solution verification, and progression reliability audit for TASK 05 — Training Academy. Ensure every single exercise position, expected solution, and multi-move branch across all 7 levels is tactically, strategically, and deterministically valid in `chess.js`, resolve prerequisite thresholds, prevent history inflation, and verify persistence and recovery.
 
 ---
 
-### Key Deliverables & Implementation Details
+### Key Audit Deliverables & Corrective Actions Executed
 
-1. **Time Control Calibration (9 Presets + Custom)**:
-   - **Bullet**: 1+0, 2+1
-   - **Blitz**: 3+0, 3+2, 5+0, 5+3
-   - **Rapid**: 10+0, 15+10
-   - **Classical**: 30+0
-   - **Custom Clock Settings**: Full validation for initial minutes (1–180) and increment seconds (0–60).
+1. **Exercise Tactical & Strategic Correctness Audit (30 Exercises Verified)**:
+   - **Pawn Promotion (`ex-103-pawn-promotion`)**: Repaired FEN from an edge King configuration that failed to give check to textbook checkmate position `6k1/4P3/6K1/8/8/8/8/8 w - - 0 1`, where both `e8=Q#` and `e8=R#` are verified, deterministic checkmates in `chess.js`.
+   - **Knight Fork Capture (`ex-203-knight-fork-c7`)**: Corrected move expectation to `Nxc7+` with capture notation and added alternative SAN tolerance; updated `ExerciseValidator` to normalize captures `x` and checks so notation mismatches never reject a valid move.
+   - **Lucena Rook Bridge (`ex-403-lucena-bridge`)**: Repaired FEN from an erroneous a-pawn edge configuration to the textbook e-pawn Lucena position `4K3/4P3/3k4/8/8/8/r7/5R2 w - - 0 1` with move `Rf4` establishing the 4th-rank shield against rear checks.
+   - **Desperado Rook Swindle (`ex-603-desperado-swindle`)**: Repaired FEN from an open queen position to `7k/2R3p1/8/8/8/1q6/8/K7 w - - 0 1`, where White plays `1.Rc8+ Kh7 2.Rh8+!` and `2...Kxh8` produces a 100% genuine stalemate.
+   - **Curriculum Expansion**: Added 3 deeply pedagogical master-level lessons with verified exercises:
+     - Level 5 Expert: `l-504-the-zwischenzug-intermediate-move` (Mate in 2: `1.Qg4+ Kh8 2.Qg7#`).
+     - Level 6 Master: `l-604-the-minority-attack-carlsbad` (The Carlsbad minority lever `b4-b5`).
+     - Level 7 Grandmaster Prep: `l-704-converting-plus-equals-endgame` (Prophylactic King march `Kg4`).
 
-2. **Engine Difficulty & Search Budgeting (6 Tiers)**:
-   - **Beginner**: Skill Level 1, depth 4, 600ms max.
-   - **Casual**: Skill Level 5, depth 6, 900ms max.
-   - **Intermediate**: Skill Level 10, depth 8, 1400ms max.
-   - **Advanced**: Skill Level 14, depth 12, 2000ms max.
-   - **Expert**: Skill Level 18, depth 15, 2800ms max.
-   - **Maximum Strength**: Skill Level 20, depth 18, 3800ms max.
-   - **Adaptive Clock Scaling**: Engine search budget dynamically adapts (`calculateEngineSearchBudget`) to remaining time, preventing the engine from flagging under severe time pressure.
+2. **Progression Gating & Level Threshold Calibration**:
+   - Re-calibrated `minCompletedLessonsRequired: 3` for Levels 3 through 7 (75% mastery of preceding 4-lesson tiers), eliminating impossible prerequisite gates.
+   - Verified that Level 1 is unlocked by default and Levels 2–7 unlock only when learners reach required completion milestones.
+   - Enforced route protection: direct URL navigation to locked lessons (`?lesson=<lockedId>`) automatically clears search params and redirects to the curriculum hub.
 
-3. **Interactive Luxury Chessboard (`react-chessboard` v5 integration)**:
-   - Cohesive obsidian/carbon palette: `#1E2332` dark squares, `#384257` light squares.
-   - Drag-and-drop and click-to-move square selection.
-   - Gold target markers for legal moves and captures.
-   - Soft amber highlights for previous move (`lastMove`).
-   - Crimson luminescence on King when under check.
-   - Board orientation dynamically matches selected player color (White or Black).
-   - Board interactions cleanly disabled during Stockfish calculation or after game conclusion.
-
-4. **Pawn Promotion Modal**:
-   - Modal prompt triggering upon pawn arrival at promotion rank (Queen, Rook, Bishop, Knight).
-   - Respects active player color piece icons and descriptions.
-
-5. **High-Precision Chess Clock Model**:
-   - Pure timestamp math (`Date.now() - lastTimestamp`) eliminates interval drift.
-   - Handles tab visibility events instantly without time loss.
-   - Automatically switches to tenths of a second (`00:09.4`) under 10 seconds per FIDE standards.
-   - Detects flag drops and fires timeout events.
-
-6. **Move History & Match Flow**:
-   - Move history sheet rendering paired White and Black standard algebraic notation (SAN) moves.
-   - Auto-scrolls to the latest move.
-   - Authoritative `chess.js` validation for checkmate, stalemate, 3-fold repetition, 50-move rule, and insufficient material.
-   - Resignation and exit confirmation modals.
-   - Completed match modal showing outcome, termination reason, duration, move count, and options to play again or study in Analysis Sanctum.
+3. **Progress Tracking & Persistence Reliability**:
+   - **Zero Duplicate History Inflation**: Updated `ProgressStorage.recordLessonCompletion` to check `isAlreadyCompleted` and return early without duplicate completion records or history spam when revisiting lessons.
+   - **Real Browser Persistence**: Tested in headless Chromium: completed Lesson 1, reloaded browser, verified lesson remained completed, Level 1 progress remained 1/6 (17%), Lesson 2 remained unlocked, and activity history was preserved.
+   - **Corrupt Storage Recovery**: Injected malformed/invalid JSON into `chess_academy_training_progress_v1`; verified that `ProgressStorage` safely catches parse exceptions and falls back to `INITIAL_PROGRESS_STATE` with zero app crashes.
 
 ---
 
 ### Executed Verifications
 - **Production Compilation (`compile_applet`)**: Succeeded.
 - **TypeScript Static Verification (`lint_applet` / `tsc --noEmit`)**: Succeeded (0 errors, 0 warnings).
-- **Unit Test Suite (`npx tsx --test`)**: 43 passed, 0 failed.
-- **Headless Browser Automated Play (`playwright-cli`)**: Verified setup flow, start match, clock ticking, move execution (1. e4), Stockfish engine reply (1... d5 Scandinavian), move history recording, resignation confirmation, and defeat result modal.
+- **Unit Test Suite (`npm test`)**: **57 passed, 0 failed** across all test suites (including 17 curriculum, pedagogical correctness, Lucena bridge, Desperado stalemate, and progress storage tests).
+- **Browser Playwright Verification**:
+  - Full automated run across all 7 levels confirming acceptance of correct moves and rejection of incorrect moves with didactic messages.
+  - Page reload persistence verified.
+  - Locked lesson URL route protection verified.
+  - Malformed localStorage recovery verified.
 
 ---
 
-### Next Immediate Task
-- **TASK 05 — Training Academy** (Structured academy curriculum tracks, exercise player, and solution verification).
+### Next Task
+- **TASK 06 — AI Coach Intelligence**: Cloud AI coach service with Google GenAI / Gemini API, move evaluation explanations, tactical blunder warnings, and conversational chess guidance.

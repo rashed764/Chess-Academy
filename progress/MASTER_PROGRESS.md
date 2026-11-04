@@ -18,7 +18,7 @@ This roadmap tracks all 10 architectural and feature tasks for building the **CH
 | **TASK 02** | **Premium UI & Dashboard** | **COMPLETED** | Luxury dark chess club visual identity, hero artwork composition, 3 primary disciplines (Quick Match, Training Academy, Test Arena), restrained salon activity log, and audio synthesizer. |
 | **TASK 03** | **Chess Engine Integration** | **COMPLETED** | Stockfish WASM Web Worker integration, UCI communication protocol, chess.js game state synchronization, position evaluation, and multi-PV calculation. |
 | **TASK 04** | **Quick Match** | **COMPLETED** | Unassisted direct engine duel mode against local Stockfish WASM, 9 time control presets + custom, 6 difficulty tiers, high-precision drift-free clock, move history sheet, pawn promotion, and game result handling. |
-| **TASK 05** | **Training Academy** | `NOT_STARTED` | Structured academy curriculum tracks (tactics, strategy, endgames), interactive exercise player, solution verification. |
+| **TASK 05** | **Training Academy** | **COMPLETED** | Structured 7-level grandmaster curriculum, 14 modules, conceptual lesson room, interactive chess exercise player with move-by-move validation, multi-branch puzzles, unlock engine, local progress persistence, and activity history. |
 | **TASK 06** | **AI Coach Intelligence** | `NOT_STARTED` | Cloud AI coach service, move explanation engine, tactical blunder alerts, multi-turn coach dialogue. |
 | **TASK 07** | **Test Arena** | `NOT_STARTED` | Unbiased diagnostic matches, accuracy profiling, performance rating estimation, weakness identification. |
 | **TASK 08** | **Personalized Learning Engine** | `NOT_STARTED` | Adaptive curriculum recommendations based on match errors, personalized drills, spaced repetition puzzle queue. |
@@ -29,7 +29,7 @@ This roadmap tracks all 10 architectural and feature tasks for building the **CH
 
 ## Phase Metrics
 - **Total Tasks**: 10
-- **Completed**: 4
+- **Completed**: 5
 - **In Progress**: 0
-- **Remaining**: 6
-- **Current Milestone**: TASK 04 Quick Match Complete
+- **Remaining**: 5
+- **Current Milestone**: TASK 05 Training Academy Complete

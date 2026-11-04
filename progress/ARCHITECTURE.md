@@ -28,7 +28,17 @@ src/
 ├── features/             # Domain-specific route pages & architectural views
 │   ├── dashboard/        # Premium Chess Club Dashboard (Hero, 3 Disciplines, Salon Log)
 │   ├── quick-match/      # Stockfish unassisted matchmaker & time control selector
-│   ├── training/         # 4-Tier structured academy curriculum & lesson explorer
+│   │   ├── components/   # ChessboardView, MoveHistoryList, PlayerClockCard, PromotionModal, etc.
+│   │   ├── hooks/        # useChessClock, useQuickMatchSession
+│   │   ├── models/       # clock.ts, difficulty.ts, timeControls.ts
+│   │   └── types.ts
+│   ├── training/         # 7-Level grandmaster curriculum & interactive exercise academy
+│   │   ├── components/   # LevelSelector, LevelProgressBanner, LessonCard, ModuleAccordion,
+│   │   │                 # ExerciseBoard, ExerciseFeedback, LearningHistoryView, LessonRoom, CurriculumOverview
+│   │   ├── data/         # levels.ts, curriculumData.ts, index.ts
+│   │   ├── hooks/        # useTrainingProgress, useExerciseSession
+│   │   ├── models/       # exerciseValidator.ts, unlockEngine.ts, progressStorage.ts
+│   │   └── types.ts
 │   ├── test-arena/       # Diagnostic test arena assessment formats & protocols
 │   ├── openings/         # Classical ECO opening reference library
 │   ├── analysis/         # Chess study sanctum with live Stockfish WASM calculation
@@ -67,9 +77,11 @@ supabase/
 tests/
 └── unit/                 # Pure logic tests executed with node:test & tsx
     ├── adapters.test.ts
+    ├── curriculum.test.ts # Level validation, ExerciseValidator, UnlockEngine, ProgressStorage
     ├── env.test.ts
     ├── fen.test.ts
     ├── formatters.test.ts
+    ├── quickMatch.test.ts
     ├── sound.test.ts
     └── uci.test.ts
 ```
@@ -91,14 +103,41 @@ tests/
 
 ---
 
-## 4. Master Task Roadmap Sequence
+## 4. Training Academy Architecture (Task 05)
+
+### Curriculum Hierarchy
+```
+Level (7 levels: Absolute Beginner to Grandmaster Preparation)
+ └── Module (14 pedagogical modules across levels)
+      └── Lesson (Didactic lessons with conceptual foundation & key takeaways)
+           └── Exercise (Interactive chess board challenge with chess.js validation)
+```
+
+### Models & Logic Separation
+1. **`ExerciseValidator` (`src/features/training/models/exerciseValidator.ts`)**:
+   - Pure, headless domain validator wrapping `chess.js`.
+   - Validates legal moves against target solutions (SAN or UCI notation).
+   - Supports multi-move puzzles by progressing through steps, automatically executing opponent counter-moves, and validating the final refutation.
+   - Allows acceptable alternative moves (`alternativeMoves`).
+2. **`UnlockEngine` (`src/features/training/models/unlockEngine.ts`)**:
+   - Governs progression access rules.
+   - Level 1 is unconditionally unlocked. Level N+1 requires completed lessons in Level N (`minCompletedLessonsRequired`).
+   - Lessons within an unlocked level unlock sequentially (or remain accessible once completed).
+3. **`ProgressStorage` (`src/features/training/models/progressStorage.ts`)**:
+   - Manages LocalStorage synchronization (`chess_academy_training_progress_v1`).
+   - Calculates mathematical completion percentages dynamically.
+   - Logs timestamped learning activities (exercise attempts, lesson completions) into an auditable activity history journal.
+
+---
+
+## 5. Master Task Roadmap Sequence
 
 1. **TASK 01 — Foundation & Project Setup** (COMPLETED)
 2. **TASK 02 — Premium UI & Dashboard** (COMPLETED)
 3. **TASK 03 — Chess Engine Integration** (COMPLETED)
 4. **TASK 04 — Quick Match** (COMPLETED)
-5. **TASK 05 — Training Academy** (NEXT)
-6. **TASK 06 — AI Coach Intelligence**
+5. **TASK 05 — Training Academy** (COMPLETED)
+6. **TASK 06 — AI Coach Intelligence** (NEXT)
 7. **TASK 07 — Test Arena**
 8. **TASK 08 — Personalized Learning Engine**
 9. **TASK 09 — Backend & Cloud Synchronization**

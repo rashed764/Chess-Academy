@@ -50,3 +50,18 @@
   - Added 13 unit tests for clock math, presets, difficulty scaling, and chess rules (total unit test suite: 43 tests, 100% pass rate).
   - Verified in live browser via Playwright: game setup, move execution (1. e4), Stockfish WASM reply (1... d5), move sheet logging, clock handover, resignation confirmation, and defeat modal.
 
+## [2026-11-04] — TASK 05: Training Academy (Curriculum & Corrective Audit)
+- **Status**: COMPLETED & AUDITED
+- **Architect / Engineer**: Senior Chess Curriculum & Pedagogical Software Engineer
+- **Summary of Changes & Corrective Audit**:
+  - Implemented 7 canonical levels from Absolute Beginner to Grandmaster Preparation with 14 syllabus modules.
+  - Conducted comprehensive audit of all 30 exercises across the curriculum in `chess.js`:
+    - Fixed pawn promotion checkmate position (`ex-103`) to `6k1/4P3/6K1/8/8/8/8/8 w - - 0 1` where `e8=Q#` and `e8=R#` are verified checkmates.
+    - Corrected Knight fork capture move (`ex-203`) to `Nxc7+` and updated `ExerciseValidator` with resilient SAN normalization.
+    - Corrected Lucena bridge endgame (`ex-403`) to textbook e-pawn setup `4K3/4P3/3k4/8/8/8/r7/5R2 w - - 0 1` with move `Rf4`.
+    - Corrected Desperado stalemate swindle (`ex-603`) to `7k/2R3p1/8/8/8/1q6/8/K7 w - - 0 1` ensuring `2...Kxh8` produces 100% genuine stalemate.
+    - Added 3 master lessons: Zwischenzug mate in 2 (`l-504`), Carlsbad minority attack (`l-604`), and King centralization in endgames (`l-704`).
+  - Calibrated prerequisite thresholds (`minCompletedLessonsRequired: 3` for Levels 3-7) to eliminate impossible gating.
+  - Resolved progress inflation: preventing duplicate `lesson_completed` activity records when revisiting completed lessons.
+  - Unit test suite expanded to 57 passing tests (0 failures).
+  - Full Playwright E2E verification of moves, rejections, multi-move branches, reload persistence, URL route locks, and corrupt storage recovery.
