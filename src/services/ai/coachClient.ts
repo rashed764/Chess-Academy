@@ -7,6 +7,26 @@ import type {
 } from '../../types/ai';
 import type { EngineEvaluation, ChessColor } from '../../types/chess';
 
+export interface AIProviderConfigStatus {
+  configured: boolean;
+  maskedKey: string;
+  activeModelId: string;
+  isCustomKey: boolean;
+  updatedAt?: string;
+}
+
+export interface DiscoveredModel {
+  id: string;
+  name: string;
+  displayName: string;
+  description?: string;
+  supportedActions?: string[];
+}
+
+export interface ModelListResponse {
+  models: DiscoveredModel[];
+  activeModelId: string;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -70,6 +90,48 @@ export class CoachApiClient {
   async getStatus(): Promise<CoachServerStatusResponse> {
     const res = await fetchWithTimeout(`${this.baseUrl}/status`, { method: 'GET' });
     return handleResponseJson<CoachServerStatusResponse>(res, 'Fetch coach status');
+  }
+
+  async getConfigStatus(): Promise<AIProviderConfigStatus> {
+    const res = await fetchWithTimeout(`${this.baseUrl}/config`, { method: 'GET' });
+    return handleResponseJson<AIProviderConfigStatus>(res, 'Fetch AI config status');
+  }
+
+  async saveApiKey(apiKey: string): Promise<{ success: boolean; status: AIProviderConfigStatus }> {
+    const res = await fetchWithTimeout(`${this.baseUrl}/config/key`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey }),
+    });
+    return handleResponseJson<{ success: boolean; status: AIProviderConfigStatus }>(res, 'Save API key');
+  }
+
+  async removeApiKey(): Promise<{ success: boolean; status: AIProviderConfigStatus }> {
+    const res = await fetchWithTimeout(`${this.baseUrl}/config/key`, { method: 'DELETE' });
+    return handleResponseJson<{ success: boolean; status: AIProviderConfigStatus }>(res, 'Remove API key');
+  }
+
+  async testConnection(apiKey?: string): Promise<{ success: boolean; message: string; modelCount: number }> {
+    const res = await fetchWithTimeout(`${this.baseUrl}/config/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey }),
+    });
+    return handleResponseJson<{ success: boolean; message: string; modelCount: number }>(res, 'Test connection');
+  }
+
+  async getModels(): Promise<ModelListResponse> {
+    const res = await fetchWithTimeout(`${this.baseUrl}/config/models`, { method: 'GET' });
+    return handleResponseJson<ModelListResponse>(res, 'Fetch model list');
+  }
+
+  async setActiveModel(modelId: string): Promise<{ success: boolean; activeModelId: string }> {
+    const res = await fetchWithTimeout(`${this.baseUrl}/config/model`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ modelId }),
+    });
+    return handleResponseJson<{ success: boolean; activeModelId: string }>(res, 'Set active model');
   }
 
   async getHint(
@@ -140,4 +202,3 @@ export class CoachApiClient {
 }
 
 export const coachApiClient = new CoachApiClient();
-

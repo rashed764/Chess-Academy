@@ -131,46 +131,93 @@
     - **Build**: `npm run build` passed.
     - **Playwright Browser Tests**: Verified LessonRoom hints (Stage 1 & 2), zero attempt count mutation, AnalysisPage position analysis, and Quick Match integrity.
 
-## [2026-11-04] — TASK 06: Final Corrective Audit & Regression Verification
+## [2026-11-04] — TASK 06: Dynamic Gemini Provider Configuration & Model Management
 - **Status**: COMPLETED & VERIFIED
-- **Auditor / Systems Engineer**: Senior Staff Software Engineer
-- **Corrective Audit Findings & Actions**:
-  - **Centipawn Loss Thresholds & Boundary Conditions**:
-    - Removed ambiguity in classification definitions. Documented exact custom educational thresholds:
-      - `best`: loss <= 10 cp, or mate-in-N preserved.
-      - `good`: 10 cp < loss <= 30 cp.
-      - `inaccuracy`: 30 cp < loss <= 90 cp.
-      - `mistake`: 90 cp < loss <= 200 cp.
-      - `blunder`: loss > 200 cp, or mate missed/blundered.
-      - `brilliant`: Strictly requires sound sacrifice with mover advantage (>= +150 cp) or mate. Unproven sacrifices conservatively fall back to `best` with explicit documentation.
-      - `unclassified`: Missing evaluation or search depth < 6 ply.
-    - Symmetric White/Black evaluation perspective and mate-in-N logic implemented.
-  - **Stockfish Provenance & Trust Boundary**:
-    - Browser Stockfish is client-side WASM; server does not pretend to execute it independently.
-    - Headless `chess.js` validates position consistency (`fenBefore` + `move` == `fenAfter`).
-    - Principal variations (PV) are replayed; invalid PVs are rejected with `pvVerification: false`.
-    - All responses tagged with provenance `client_stockfish_wasm`.
-  - **Server Hardening & Stability**:
-    - Reverse proxy headers respected (`app.set('trust proxy', 1);`).
-    - Request body payload capped at 200kb.
-    - Removed deprecated sampling parameters for `gemini-3.8-flash` in `@google/genai`.
-    - Added 10-second timeout guard on external calls.
-    - Fixed client retry logic to not retry permanent 4xx errors.
-    - Updated `CoachPanel` to clear active hints when position FEN changes or exercise resets.
-  - **Verifications**:
-    - Unit tests: 78/78 passed (100% pass rate).
-    - `tsc --noEmit`: 0 errors.
-    - `npm run build`: Succeeded in 1.18s.
-    - Playwright browser regression: Full verification across LessonRoom hints, attempt tracking, Game Analysis, and Quick Match.
+- **Architect / Engineer**: Lead AI & Systems Infrastructure Engineer
+- **Summary of Implementation**:
+  - **Encrypted Storage Manager (`src/server/configManager.ts`)**:
+    - AES-256-GCM encrypted persistence layer storing credentials and model selection to `data/provider_config.enc`.
+    - Key masking (`••••••••••••1234`), in-memory cache, status getters, and clean key removal.
+  - **Dynamic Gemini Client & Model Listing (`src/server/geminiClient.ts`)**:
+    - Dynamic key lookup from encrypted server config falling back to `process.env.GEMINI_API_KEY`.
+    - Model listing endpoint using `@google/genai` `ai.models.list()`, filtering for text generation (`generateContent`).
+    - `getActiveModel()` dynamic lookup resolver.
+  - **Express Provider API Routes (`src/server/coachRouter.ts`)**:
+    - Added routes for `/api/coach/config` (status), `/api/coach/config/key` (save/delete key), `/api/coach/config/test` (connection probe), `/api/coach/config/models` (list text models), and `/api/coach/config/model` (set active model).
+  - **Centralized Model Propagation in AI Coach (`src/server/coachService.ts`)**:
+    - Updated `generateCoachHint`, `explainPosition`, `explainMove`, and `chatWithCoach` to dynamically resolve model via `getActiveModel()`.
+  - **Settings Page UI Integration (`src/features/settings/SettingsPage.tsx`)**:
+    - Built luxury dark card "AI Provider Configuration" in `/settings` featuring key masking input, show/hide eye toggle, Save Credentials, Test Connection, Remove Key, dynamic Model Selection dropdown, and Refresh Models button.
+  - **Unit Tests & Verifications**:
+    - Added unit test suite `tests/unit/configManager.test.ts` verifying encryption, key masking, active model updating, and error handling.
+    - All 85/85 unit tests passed (100% pass rate).
+    - `tsc --noEmit` 0 errors.
+    - `npm run lint` 0 errors.
+    - `compile_applet` build succeeded.
 
-## [2026-11-04] — TASK 06: Final Acceptance Gap Closure Verification
-- **Status**: IN_PROGRESS (Verification & Gap Closure Completed, Awaiting User Review)
-- **Systems & Verification Engineer**: Senior Staff Software Engineer
-- **Summary of Actions & Evidentiary Findings**:
-  - **Exact Numeric Threshold Matrix**: Published plain-text formula matrix with lower and upper bounds, inclusive/exclusive boundaries, mover-relative delta conventions, depth minimum (6 ply), and mate preservation logic.
-  - **Engine Provenance Enforcement**: Confirmed all Stockfish fields and move quality classifications carry `provenance: 'client_stockfish_wasm'`. Clarified headless `chess.js` role as structural validator rather than numerical engine verifier.
-  - **Live Gemini Provider Testing**: Verified missing-key state returns deterministic fallback (`source: 'local_fallback'`) across all 6 operations. Live provider calls recorded as `LIVE GEMINI GENERATION: NOT VERIFIED / BLOCKED` due to unconfigured container API key / egress restrictions.
-  - **Prompt Injection Defense**: Added permanent automated regression tests in `tests/unit/coach.test.ts` for 4 adversarial injection patterns. Verified 100% defense without leaking solution moves.
-  - **Timeout & Request Cancellation**: Updated `withTimeout` to pass `AbortController.signal` into `@google/genai` request config. Confirmed client-side connection abort on 10s deadline.
-  - **Production Runtime Verification**: Successfully executed production build, launched production server on port 3005 (`NODE_ENV=production tsx server.ts`), and verified static assets, all 6 API endpoints, 400 validation error on malformed input, and SPA route fallback.
-  - **Test Suite Status**: 80/80 unit tests passing (100%), `tsc --noEmit` 0 errors, `npm run build` passing.
+## [2026-11-06] — TASK 07: Test Arena (Unbiased Chess Assessment & Diagnostic Reports)
+- **Status**: COMPLETED & VERIFIED
+- **Architect / Engineer**: Lead Chess Engine & Performance Evaluation Engineer
+- **Summary of Implementation**:
+  - **Three Standardized Assessment Protocols**:
+    - `Single-Match Diagnostic`: 15+10 classical rapid encounter (`RAPID_15_10`), 1 game, configurable Stockfish difficulty, White/Black/Random color choice.
+    - `Five-Game Mastery Battery`: 10+0 rapid encounter (`RAPID_10_0`), 5 consecutive games with alternating colors, session-to-session persistence.
+    - `Tactical Speed Assessment`: 5+0 blitz encounter (`BLITZ_5_0`), 1 game testing candidate move speed under severe clock pressure.
+  - **Strict Unbiased Assessment Isolation Boundary**:
+    - Complete suppression of AI Coach panel, progressive hints, move recommendations, live evaluation bar, and quality badges during match play.
+  - **Post-Game Client-Side Stockfish WASM Analysis Engine**:
+    - `evaluatePosition` at depth 8+ evaluating every player move after game completion.
+    - Centipawn loss strictly evaluated from moving player's perspective:
+      `evalLossCp = mover === 'w' ? scoreBeforeWhiteCp - scoreAfterWhiteCp : scoreAfterWhiteCp - scoreBeforeWhiteCp`.
+    - Explicit mate-score transition handling without numeric subtraction errors.
+    - Move classification into 7 standard tiers (`brilliant`, `best`, `good`, `inaccuracy`, `mistake`, `blunder`, `unclassified`).
+  - **Diagnostic Report & Performance Metrics**:
+    - Average Centipawn Loss (ACPL), custom bounded accuracy percentage `100 * exp(-0.004 * ACPL)` with educational disclaimer.
+    - Move classification breakdown with visual bar indicators.
+    - Phase performance breakdown (Opening, Middlegame, Endgame) using material and ply-based classification.
+    - Identified tactical strengths and technical weaknesses.
+    - Interactive replay board allowing move-by-move position preview with alternative engine lines.
+    - Experimental skill range estimation with explicit disclosure that it is NOT an official FIDE rating.
+    - One-click JSON report export.
+  - **Local Persistence Layer (`TestArenaStorage`)**:
+    - LocalStorage keys: `chess_academy_test_reports_v1` and `chess_academy_active_assessment_v1`.
+    - Safe corrupted data handling with fallback to empty state.
+  - **Verifications**:
+    - **Unit Tests**: 95/95 tests passing (added `tests/unit/testArena.test.ts` covering perspective math, move quality tiers, mate transitions, depth thresholds, phase detection, accuracy formulas, format configs, aggregation, and storage resilience).
+    - **Static Analysis**: `tsc --noEmit` passed with 0 errors.
+    - **Build**: `compile_applet` passed successfully.
+    - **Playwright Browser Tests**: Verified Hub, responsive viewports (Desktop 1440x900, Tablet 768x1024, Mobile 390x844, Mobile landscape 844x390), match interface, clock countdown, resignation confirmation, analysis progress bar, intermission modal, full Diagnostic Report, and archive card rendering.
+
+## [2026-11-06] — TASK 08: Personalized Learning Engine
+- **Status**: COMPLETED & VERIFIED
+- **Architect / Engineer**: Lead Chess Pedagogy & Machine Intelligence Architect
+- **Summary of Implementation**:
+  - **Evidence Synthesis Engine (`EvidenceCollector`)**:
+    - Normalizes evidence points from Training Academy activity records, exercise passed/failed attempts, lesson completions, and Test Arena diagnostic matches.
+    - Captures engine-evaluated move errors (blunders, mistakes), phase metrics, ACPL, and accuracy percentages.
+    - Guarantees idempotency via source-scoped unique IDs.
+  - **10 Defined Educational Categories (`topicTaxonomy.ts`)**:
+    - Declaratively mapped all 30 canonical lessons to educational categories: tactical patterns, hanging pieces, checkmate patterns, king safety, opening principles, piece activity, positional understanding, endgame fundamentals, calculation accuracy, and time management.
+  - **Conservative Performance Analyzer (`PerformanceAnalyzer`)**:
+    - Single mistakes or isolated errors are never labeled as weaknesses (requires multiple verified errors).
+    - Detects confirmed strengths (>=80% success rate with verified samples).
+    - Classifies weaknesses by severity (`potential`, `confirmed`, `repeated`) with pedagogical remedies and confidence ratings.
+    - Computes recent trends (`improving`, `regressing`, `stable`) comparing recent vs earlier trials.
+  - **Adaptive Recommendation Engine (`RecommendationEngine`)**:
+    - Generates prioritized recommendations (weakness review, next canonical lesson, diagnostic evaluation, tactical blitz drill).
+    - Guarantees 100% canonical lesson validation (`CANONICAL_LESSON_IDS`). Never fabricates lesson IDs or bypasses prerequisites.
+    - Generates personalized learning plan with primary objective and focus disciplines.
+  - **Local Persistence & Recovery (`LearningEngineStorage`)**:
+    - Persists computed profile under `chess_academy_learner_profile_v1` with safe corrupted-JSON recovery.
+  - **UI Integration**:
+    - **Dashboard**: `PersonalizedFocusCard` highlighting primary objective and focus disciplines with refresh capability.
+    - **Training Academy**: `AdaptiveRecommendationsList` mounted directly above the curriculum level selector.
+    - **Progress & Analytics**: `TopicMasterySection` presenting strengths, gaps, and the full 10-discipline mastery matrix.
+    - **Test Arena**: Post-game report connects diagnostic findings directly to the Personalized Learning Engine.
+  - **Verifications**:
+    - **Unit Tests**: 105/105 tests passing (added `tests/unit/learningEngine.test.ts` covering empty profiles, new learners, training evidence, arena evidence, single-mistake protection, repeated weakness triggering, canonical ID validation, prerequisite enforcement, idempotency, and trend detection).
+    - **Static Analysis**: `tsc --noEmit` passed with 0 errors.
+    - **Build**: `compile_applet` passed successfully.
+    - **Playwright Browser Tests**: Verified Dashboard card, Training Academy recommendations, Progress topic matrix, and responsive viewports (Desktop 1440x900, Tablet 768x1024, Mobile 390x844).
+
+

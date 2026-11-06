@@ -44,9 +44,16 @@ src/
 │   ├── analysis/         # Chess study sanctum with live Stockfish WASM calculation
 │   ├── progress/         # Personal rating trajectory & honors journal
 │   ├── profile/          # Member credentials & title aspirations
-│   ├── settings/         # Acoustic feedback & board visual assists
+│   ├── settings/         # Acoustic feedback, board visual assists & AI Provider Configuration
 │   └── not-found/        # 404 route fallback
 ├── hooks/                # Custom React hooks (useMediaQuery, etc.)
+├── server/               # Express backend server routes, config manager & AI services
+│   ├── configManager.ts  # Encrypted server storage for API key and active model ID
+│   ├── geminiClient.ts   # Dynamic GoogleGenAI client factory & SDK model listing
+│   ├── coachRouter.ts    # API endpoints (/api/coach/* and /api/coach/config/*)
+│   ├── coachService.ts   # Move quality classification, progressive hints & explanations
+│   ├── rateLimiter.ts    # Token bucket rate limiting middleware
+│   └── validators.ts    # FEN, move legality & position consistency validators
 ├── services/
 │   ├── ai/               # Provider-independent AI coaching adapters & contracts
 │   ├── chess/            # UCI engine adapter, FEN parser, rule utilities
@@ -58,88 +65,23 @@ src/
 │   │   ├── fen.ts        # FEN parser & validator
 │   │   └── types.ts      # Engine interfaces
 │   └── supabase/         # Safe client factory & database schema types
-├── stores/               # Zustand global state (useAppStore)
-├── types/                # Domain TypeScript models (chess, user, ai, curriculum)
-├── utils/                # Pure utilities (cn, env, formatters, sound)
-├── constants/            # Route definitions, theme tokens, chess constants
-└── routes/               # Centralized React Router configuration
-
-public/
-└── stockfish/            # Static Stockfish WASM distribution
-    ├── stockfish.wasm    # 546KB WASM engine binary
-    ├── stockfish.wasm.js # Web Worker WASM loader
-    ├── stockfish.js      # asm.js fallback
-    └── Copying.txt       # GNU GPL v3 license
-
-supabase/
-└── migrations/           # PostgreSQL DDL and Row Level Security policies
-
-tests/
-└── unit/                 # Pure logic tests executed with node:test & tsx
-    ├── adapters.test.ts
-    ├── curriculum.test.ts # Level validation, ExerciseValidator, UnlockEngine, ProgressStorage
-    ├── env.test.ts
-    ├── fen.test.ts
-    ├── formatters.test.ts
-    ├── quickMatch.test.ts
-    ├── sound.test.ts
-    └── uci.test.ts
 ```
 
 ---
 
-## 3. Chess Engine Architecture & MultiPV Design
+## 3. High-Precision Chess Clock Model
 
-### Engine Specifications
-- **Engine**: Stockfish WASM (compiled via Emscripten by Niklas Fiekas and official Stockfish contributors, package `stockfish.js@10.0.2`).
-- **License**: GNU General Public License v3 (GPLv3).
-- **Assets**: Single-threaded WASM (`stockfish.wasm`, 546KB) paired with `stockfish.wasm.js` loader; served statically from `public/stockfish/`.
-- **Worker Execution**: Instantiated via dedicated `new Worker('/stockfish/stockfish.wasm.js')` so all intensive branch pruning, minimax evaluations, and hash lookups occur entirely off the main UI thread.
-
-### MultiPV Aggregation & Consistency Guarantee
-- **Segregation**: MultiPV auxiliary lines (`multipv 2`, `multipv 3`, etc.) are aggregated into `_multiPvMap` and sorted strictly by multipv index.
-- **Top Move Protection**: `evaluation.depth`, `evaluation.scoreCentipawns`, `evaluation.mateInMoves`, and `evaluation.bestMoveUci` are strictly populated from `multipv === 1` and never overwritten by auxiliary lines.
-- **Best Move Alignment**: The engine's final `bestmove` token is enforced as the authoritative move and guaranteed to match the leading move of Line 1.
+- Timestamp-based elapsed time calculation avoiding JS interval drift.
+- Pre-allocated millisecond budgets for 9 standard time control presets (Bullet 1+0 to Classical 30+0).
+- Handover and increment addition executed atomically on move completion.
 
 ---
 
-## 4. Training Academy Architecture (Task 05)
+## 4. Canonical Curriculum Architecture
 
-### Curriculum Hierarchy
-```
-Level (7 levels: Absolute Beginner to Grandmaster Preparation)
- └── Module (14 pedagogical modules across levels)
-      └── Lesson (Didactic lessons with conceptual foundation & key takeaways)
-           └── Exercise (Interactive chess board challenge with chess.js validation)
-```
-
-### Models & Logic Separation
-1. **`ExerciseValidator` (`src/features/training/models/exerciseValidator.ts`)**:
-   - Pure, headless domain validator wrapping `chess.js`.
-   - Validates legal moves against target solutions using position-aware legal move resolution (`playSanOrUci` and `doesMoveMatchTarget`).
-   - Supports both SAN and UCI coordinate notation matched against verbose legal moves from `chess.js`.
-   - Exposes `OpponentReplyDetails` (`from`, `to`, `san`, `uci`) on counter-moves for board square highlighting.
-   - Generates typed `playerMoveRecord` and `opponentMoveRecord` with before/after FEN and move parameters.
-   - Supports multi-move puzzles by progressing through steps, automatically executing opponent counter-moves, and validating the final refutation.
-   - Allows acceptable alternative moves (`alternativeMoves`).
-2. **`UnlockEngine` & Canonical Progression (`src/features/training/models/unlockEngine.ts`, `data/index.ts`)**:
-   - Governs progression access rules.
-   - Level 1 is unconditionally unlocked. Level N+1 requires completed lessons in Level N (`minCompletedLessonsRequired`).
-   - Explicit `CANONICAL_LESSON_IDS` array (30 lessons in exact pedagogical order across 7 levels and 14 modules) guarantees deterministic, symmetrical `getNextLesson` and `getPreviousLesson` traversal.
-   - Lessons within an unlocked level unlock sequentially (or remain accessible once completed).
-3. **`ProgressStorage` (`src/features/training/models/progressStorage.ts`)**:
-   - Manages LocalStorage synchronization (`chess_academy_training_progress_v1`).
-   - Tracks both successful and failed exercise attempts (`totalExerciseAttempts`, `incorrectExerciseAttempts`).
-   - Dynamically calculates accurate mathematical success rates (`(total - incorrect) / total * 100`).
-   - Logs timestamped learning activities (`exercise_completed`, `exercise_failed`, `lesson_completed`) into an auditable activity history journal with idempotency protection against duplicate spam.
-4. **Unified Type Contracts (`src/types/curriculum.ts` & `src/features/training/types.ts`)**:
-   - `src/features/training/types.ts` is the single source of truth for curriculum, exercise, and progress data structures.
-   - `src/types/curriculum.ts` serves as a clean re-export facade with downstream interfaces (`ArenaEvaluationReport`, `UserLessonProgress`) preventing circular dependencies or type duplication.
-5. **Session State & Real-Time Move History (`src/features/training/hooks/useExerciseSession.ts`)**:
-   - Maintains `moveHistorySan: string[]` and `moveHistory: MoveRecord[]` tracking every half-move in the exercise session.
-   - Exposes `lastMove` containing player move or opponent reply coordinates `{ from, to }` for board square highlighting.
-   - Notifies parent components via `onAttemptRecorded` callback with `ExerciseAttemptNotification` on every correct, incorrect, or illegal attempt.
-
+- 7 canonical levels from Absolute Beginner to Grandmaster Preparation with 30 exercises.
+- `CANONICAL_LESSON_IDS` array defines exact linear ordering.
+- Exercise attempts recorded in `useExerciseSession` without duplication.
 
 ---
 
@@ -149,45 +91,122 @@ Level (7 levels: Absolute Beginner to Grandmaster Preparation)
    - **Local Stockfish WASM + Headless chess.js = Chess Truth**: Engine calculations, numerical centipawn evaluations, forced mate detection, and move legality are authoritative.
    - **Data Provenance**: Stockfish runs strictly in the client's browser Web Worker (`client_stockfish_wasm`). The server does not falsely claim to execute Stockfish independently. Any engine data received from the browser is treated as untrusted client data and tagged with `provenance: 'client_stockfish_wasm'`.
    - **Server-Side Validation**: Every FEN is validated with `chess.js`, move legality in the position is strictly verified, position consistency (`fenBefore` + `move` == `fenAfter`) is checked, and any client-supplied Principal Variations (PV) are replayed on a headless board. If illegal moves are present in the PV, `pvVerification` is set to `false`.
-   - **Google GenAI (Gemini 3.8 Flash via `@google/genai`) = Educational Explanation**: Generates pedagogical commentary, strategic advice, and progressive hints. The LLM never creates numerical evaluations or authoritative best moves.
+   - **Google GenAI (Gemini) = Educational Explanation**: Generates pedagogical commentary, strategic advice, and progressive hints. The LLM never creates numerical evaluations or authoritative best moves.
 
 2. **Server-Side Security, Hardening & Rate Limiting (`src/server/`)**:
    - Express server (`server.ts`) hosting API routes at `/api/coach`.
    - `trust proxy: 1` enabled for accurate client IP identification behind reverse proxies (`X-Forwarded-For`).
    - Request body limit capped at `200kb` to protect against payload flooding DoS attacks.
-   - Per-IP in-memory token bucket rate limiter (60 requests/minute, burst capacity 60). Note: Being in-memory, buckets reset across server restarts and are local to each Node process. For horizontal multi-instance scaling in future production tasks, a Redis-backed distributed limiter can be substituted without API contract changes.
+   - Per-IP in-memory token bucket rate limiter (60 requests/minute, burst capacity 60).
    - `GEMINI_API_KEY` is loaded strictly on the server and is never sent to the browser or bundled in client code.
-   - Strict input validation via `src/server/validators.ts`: FEN validation using `chess.js`, move legality checking, hint stage restriction (1, 2, 3), and text length bounds.
-   - External LLM requests wrapped in a 10-second timeout guard to ensure fast fallback.
+   - Strict input validation via `src/server/validators.ts`.
+   - Bounded 10-second client timeout guard (`withTimeout`) passing `AbortSignal`.
 
-3. **Progressive Hint Engine (`generateCoachHint`)**:
-   - Three pedagogical hint stages:
-     - **Stage 1 (Direction/Nudge)**: Directs player attention to the relevant sector, undefended pieces, or overloaded defenders without naming pieces or moves.
-     - **Stage 2 (Tactical Motif)**: Explains the underlying tactical motif (pin, fork, skewer, deflection, decoy) and the principle behind it.
-     - **Stage 3 (Concrete Idea)**: Directs concrete calculation to forcing candidate moves and key squares.
-   - Prompt injection resistance: System instructions, chess position data, and user messages are cleanly separated; system instructions forbid revealing puzzle solutions or overriding role constraints.
-   - Non-interference: Requesting hints does NOT increment exercise attempt counters, penalize success rates, or auto-solve puzzles.
+3. **Encrypted Server Storage & AI Model Discovery (`src/server/configManager.ts`)**:
+   - Stores custom API keys and selected model IDs in `/app/applet/data/provider_config.enc` using Node.js `crypto` AES-256-GCM encryption.
+   - Masked key rendering (`••••••••••••1234`) ensures raw API keys are never returned in status endpoints or UI responses.
+   - Dynamic SDK Model Discovery: `listAvailableModels()` fetches available models via `@google/genai` `ai.models.list()`, filtering for text generation (`generateContent`).
+   - Centralized Model Propagation: All 4 coach operations (Hints, Position Explanation, Move Explanation, Dialogue Chat) dynamically resolve the active model via `getActiveModel()`.
 
-4. **Move Quality Classification Matrix (`classifyMoveQuality`)**:
-   - Compares evaluations before and after moves from the active mover's perspective:
-     - For White: `evalLoss = scoreBefore - scoreAfter`
-     - For Black: `evalLoss = scoreAfter - scoreBefore`
-   - **Exact Educational Centipawn Loss Thresholds**:
-     - `best`: `evalLoss <= 10 cp` or matches engine recommended best move, or forced mate-in-N is preserved.
-     - `good`: `10 cp < evalLoss <= 30 cp`.
-     - `inaccuracy`: `30 cp < evalLoss <= 90 cp`.
-     - `mistake`: `90 cp < evalLoss <= 200 cp`.
-     - `blunder`: `evalLoss > 200 cp`, or player allows a forced mate against themselves, or player misses a forced mate they previously possessed.
-     - `brilliant`: Strictly requires a sound tactical sacrifice with decisive engine advantage (`score >= +150 cp`) or mate. Unproven sacrifices conservatively fall back to `best` with explicit documentation.
-     - `unclassified`: Missing before/after evaluation, or engine search depth is insufficient (`depth < 6 ply`).
-   - *Note*: These thresholds are custom educational thresholds designed for pedagogical clarity in Chess Academy, not universal FIDE rules or official standard classifications.
+4. **Progressive Hint Engine (`generateCoachHint`)**:
+   - Three pedagogical hint stages (Stage 1: Direction/Nudge, Stage 2: Tactical Motif, Stage 3: Concrete Idea).
+   - Prompt injection resistance: System instructions, chess position data, and user messages are cleanly separated.
+   - Non-interference: Hints do NOT increment exercise attempt counters, penalize success rates, or auto-solve puzzles.
 
-5. **Deterministic Local Fallback**:
-   - When offline or when `GEMINI_API_KEY` is unconfigured, all endpoints return high-quality deterministic responses derived genuinely from exercise and engine data, tagged with `source: 'local_fallback'` and `provenance: 'client_stockfish_wasm'`.
+5. **Move Quality Classification Matrix (`classifyMoveQuality`)**:
+   - Exact Educational Centipawn Loss Thresholds (`best` <= 10 cp, `good` <= 30 cp, `inaccuracy` <= 90 cp, `mistake` <= 200 cp, `blunder` > 200 cp, `brilliant` for sound sacrifices with mover advantage >= +150 cp, `unclassified` for missing evals or depth < 6 ply).
 
 ---
 
-## 6. Master Task Roadmap Sequence
+---
+
+## 6. Test Arena Architecture & Performance Diagnostics (TASK 07)
+
+1. **Unbiased Assessment Isolation Boundary**:
+   - The interactive match arena (`ArenaMatchView`) enforces strict cognitive isolation: AI Coach panel, progressive hints, move recommendations, live evaluation bar, and quality badges are completely suppressed.
+   - Operates with local `Stockfish WASM` (`getChessEngine()`) running at calibrated difficulty levels (1–20).
+   - High-precision timestamp drift-free clock (`useChessClock`) managing 15+10, 10+0, and 5+0 time controls with increment addition.
+
+2. **Standardized Assessment Protocols**:
+   - `Single-Match Diagnostic`: 15+10 classical rapid encounter (`RAPID_15_10`), 1 game, configurable Stockfish difficulty, White/Black/Random color choice.
+   - `Five-Game Mastery Battery`: 10+0 rapid encounter (`RAPID_10_0`), 5 consecutive games with alternating colors, session-to-session persistence.
+   - `Tactical Speed Assessment`: 5+0 blitz encounter (`BLITZ_5_0`), 1 game testing candidate move generation under severe clock pressure.
+
+3. **Post-Game Client-Side Analysis Engine (`src/features/test-arena/models/analysisEngine.ts`)**:
+   - Positional evaluations generated at depth 8+ with client-side Stockfish WASM upon game conclusion.
+   - **Mover Perspective Conversion**:
+     All centipawn evaluations are converted to mover perspective:
+     `evalLossCp = mover === 'w' ? scoreBeforeWhiteCp - scoreAfterWhiteCp : scoreAfterWhiteCp - scoreBeforeWhiteCp`.
+   - **Mate Transitions**:
+     Safe non-numeric calculations prevent integer overflow on forced mate sequences.
+   - **Move Classification Matrix**:
+     - `brilliant`: Sacrifice yielding substantial advantage (`scoreAfter >= 200`, `evalLossCp <= 10`).
+     - `best`: Engine top choice or `evalLossCp <= 10`.
+     - `good`: `evalLossCp <= 35`.
+     - `inaccuracy`: `evalLossCp <= 90`.
+     - `mistake`: `evalLossCp <= 200`.
+     - `blunder`: `evalLossCp > 200`.
+     - `unclassified`: Depth < 6 ply.
+
+4. **Performance Metrics & Diagnostic Reporting (`src/features/test-arena/models/metrics.ts`)**:
+   - **Average Centipawn Loss (ACPL)**: Sum of centipawn losses divided by player moves count.
+   - **Accuracy Formula**: Custom bounded educational heuristic:
+     `Accuracy = Math.round(Math.min(100, Math.max(0, 100 * Math.exp(-0.004 * ACPL))))`.
+   - **Game Phase Detection**: Opening (ply <= 20 and material >= 62), Middlegame (material > 26), Endgame (material <= 26 or queens absent with minor pieces).
+   - **Interactive Game Replay**: Move-by-move replay board previewing each evaluated position and alternative engine lines.
+   - **Estimated Skill Range**: Experimental engine-relative educational indicator with explicit disclaimer stating it is NOT an official FIDE rating.
+
+5. **Persistence Schema (`TestArenaStorage`)**:
+   - `chess_academy_test_reports_v1`: Array of completed `AssessmentReport` objects.
+   - `chess_academy_active_assessment_v1`: Currently active multi-game battery for resume capability.
+   - Protected against JSON corruption with automatic recovery.
+
+---
+
+---
+
+## 7. Personalized Learning Engine Architecture (TASK 08)
+
+1. **Evidence Ingestion & Normalization (`EvidenceCollector`)**:
+   - Sources: Training Academy interactive exercise attempts (`exercise_passed`, `exercise_failed`), lesson completions, and Test Arena diagnostic assessment matches (`AssessmentReport`).
+   - Normalizes evidence points with weights (1.0 for training exercises, 1.5–2.0 for engine-evaluated games/moves).
+   - Authoritative chess truth remains anchored in local Stockfish WASM and chess.js; the learning engine evaluates pedagogical patterns without altering engine assessments.
+   - Idempotent ingestion prevents duplicate points across storage reloads.
+
+2. **Educational Topic Taxonomy (`topicTaxonomy.ts`)**:
+   - Maps all 30 canonical curriculum lessons to 10 standardized educational categories:
+     - `tactical_patterns`
+     - `hanging_pieces_blunders`
+     - `checkmate_patterns`
+     - `king_safety`
+     - `opening_principles`
+     - `piece_activity_development`
+     - `positional_understanding`
+     - `endgame_fundamentals`
+     - `calculation_accuracy`
+     - `time_management`
+
+3. **Conservative Performance & Weakness Analysis (`PerformanceAnalyzer`)**:
+   - Minimum sample thresholds enforce confidence tiers (`insufficient`, `low`, `moderate`, `high`).
+   - **No Weakness on Isolated Errors**: A single mistake or exercise failure is never flagged as a weakness (requires $\ge 2$ verified failures).
+   - Severity classification: `potential`, `confirmed`, `repeated`.
+   - Mastery states: `insufficient_data`, `developing`, `competent`, `proficient`, `mastered`.
+   - Recent trend analysis (`improving`, `regressing`, `stable`) comparing recent 4 samples against earlier history.
+
+4. **Recommendation & Adaptive Sequencing (`RecommendationEngine`)**:
+   - Prioritized recommendation generation:
+     - Highest Priority: Targeted weakness review of completed lessons or unlocked remedial exercises.
+     - Natural Progression: Next unlocked canonical lesson adhering to `CANONICAL_LESSON_IDS`.
+     - Diagnostic Checks: Prompting unassisted Test Arena matches when training volume is high but assessment data is missing.
+   - Zero Prerequisite Bypass: All recommendations strictly validate against `UnlockEngine.isLessonUnlocked()`.
+
+5. **Persistence Schema (`LearningEngineStorage`)**:
+   - Profile persisted locally under `chess_academy_learner_profile_v1`.
+   - Safely recovers from malformed or missing JSON by recalculating from source records.
+
+---
+
+## 8. Master Task Roadmap Sequence
 
 1. **TASK 01 — Foundation & Project Setup** (COMPLETED)
 2. **TASK 02 — Premium UI & Dashboard** (COMPLETED)
@@ -195,8 +214,7 @@ Level (7 levels: Absolute Beginner to Grandmaster Preparation)
 4. **TASK 04 — Quick Match** (COMPLETED)
 5. **TASK 05 — Training Academy** (COMPLETED)
 6. **TASK 06 — AI Coach Intelligence** (COMPLETED)
-7. **TASK 07 — Test Arena** (NEXT)
-8. **TASK 08 — Personalized Learning Engine**
-9. **TASK 09 — Backend & Cloud Synchronization**
+7. **TASK 07 — Test Arena** (COMPLETED)
+8. **TASK 08 — Personalized Learning Engine** (COMPLETED)
+9. **TASK 09 — Backend & Cloud Synchronization** (NEXT)
 10. **TASK 10 — Testing & Production**
-

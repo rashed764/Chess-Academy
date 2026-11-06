@@ -7,6 +7,8 @@ import { ModuleAccordion } from './ModuleAccordion';
 import { LearningHistoryView } from './LearningHistoryView';
 import { getLevelById, getModulesByLevelId } from '../data';
 import type { AcademyLevelId, AcademyProgressState } from '../types';
+import { usePersonalizedLearning } from '../../learning-engine/hooks/usePersonalizedLearning';
+import { AdaptiveRecommendationsList } from '../../learning-engine/components/AdaptiveRecommendationsList';
 
 interface CurriculumOverviewProps {
   progress: AcademyProgressState;
@@ -43,6 +45,7 @@ export const CurriculumOverview: React.FC<CurriculumOverviewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'curriculum' | 'history'>('curriculum');
   const [searchQuery, setSearchQuery] = useState('');
+  const { recommendations } = usePersonalizedLearning();
 
   const currentLevel = getLevelById(selectedLevelId)!;
   const modules = getModulesByLevelId(selectedLevelId);
@@ -112,6 +115,12 @@ export const CurriculumOverview: React.FC<CurriculumOverviewProps> = ({
 
       {activeTab === 'curriculum' ? (
         <div className="space-y-6">
+          {/* Personalized Adaptive Recommendations */}
+          <AdaptiveRecommendationsList
+            recommendations={recommendations}
+            onOpenLesson={onOpenLesson}
+          />
+
           {/* Level Selection Tabs */}
           <LevelSelector
             selectedLevelId={selectedLevelId}

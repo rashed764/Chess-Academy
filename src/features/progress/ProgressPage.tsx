@@ -3,9 +3,12 @@ import { TrendingUp, ArrowLeft, Award, Calendar, CheckCircle2, Shield, Flame } f
 import { NavLink } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
 import { playChessClick } from '../../utils/sound';
+import { usePersonalizedLearning } from '../learning-engine/hooks/usePersonalizedLearning';
+import { TopicMasterySection } from '../learning-engine/components/TopicMasterySection';
 
 export const ProgressPage: React.FC = () => {
   const { currentProfile } = useAppStore();
+  const { topicMetrics, strengths, weaknesses, insufficientEvidenceAreas } = usePersonalizedLearning();
 
   const milestones = [
     { name: "The Grandmaster Scholar", desc: "Completed all Tier I & II foundational curriculum lessons.", date: "Nov 2026", active: true },
@@ -127,6 +130,25 @@ export const ProgressPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Verified Topic Mastery & Learning Engine Diagnostics */}
+      <section className="space-y-4 pt-4 border-t border-[#242938]">
+        <div>
+          <h3 className="text-xl font-bold text-[#F4F4F5] font-cinzel tracking-wide">
+            Verified Educational Performance
+          </h3>
+          <p className="text-xs text-[#9297A5] mt-0.5">
+            Objective topic evaluation synthesized from training exercise attempts and Test Arena matches.
+          </p>
+        </div>
+
+        <TopicMasterySection
+          topicMetrics={topicMetrics}
+          strengths={strengths}
+          weaknesses={weaknesses}
+          insufficientEvidenceAreas={insufficientEvidenceAreas}
+        />
+      </section>
     </div>
   );
 };

@@ -19,9 +19,9 @@ This roadmap tracks all 10 architectural and feature tasks for building the **CH
 | **TASK 03** | **Chess Engine Integration** | **COMPLETED** | Stockfish WASM Web Worker integration, UCI communication protocol, chess.js game state synchronization, position evaluation, and multi-PV calculation. |
 | **TASK 04** | **Quick Match** | **COMPLETED** | Unassisted direct engine duel mode against local Stockfish WASM, 9 time control presets + custom, 6 difficulty tiers, high-precision drift-free clock, move history sheet, pawn promotion, and game result handling. |
 | **TASK 05** | **Training Academy** | **COMPLETED** | Structured 7-level grandmaster curriculum, 14 modules, conceptual lesson room, interactive chess exercise player with move-by-move validation, multi-branch puzzles, unlock engine, local progress persistence, failed attempt tracking, opponent move highlighting, and activity history. |
-| **TASK 06** | **AI Coach Intelligence** | `IN_PROGRESS` | Cloud AI coach service with Google GenAI / Gemini API, server-side secure endpoints, engine-grounded explanations, 3-stage progressive hints, conversational coaching, and acceptance gap closure. |
-| **TASK 07** | **Test Arena** | `NOT_STARTED` | Unbiased diagnostic matches, accuracy profiling, performance rating estimation, weakness identification. |
-| **TASK 08** | **Personalized Learning Engine** | `NOT_STARTED` | Adaptive curriculum recommendations based on match errors, personalized drills, spaced repetition puzzle queue. |
+| **TASK 06** | **AI Coach Intelligence** | **COMPLETED** | Cloud AI coach service with Google GenAI / Gemini API, server-side secure endpoints, engine-grounded explanations, 3-stage progressive hints, conversational coaching, dynamic model management, and acceptance gap closure. |
+| **TASK 07** | **Test Arena** | **COMPLETED** | Unbiased diagnostic matches (Single Match, 5-Game Battery, Tactical Speed), client Stockfish WASM post-game evaluation, ACPL & custom accuracy profiling, phase diagnostics, experimental skill range disclosure, interactive game replay, and local persistence. |
+| **TASK 08** | **Personalized Learning Engine** | **COMPLETED** | Evidence-based adaptive learning engine synthesizing Training exercise attempts and Test Arena diagnostics, 10 educational discipline taxonomies, conservative weakness detection, personalized learning plan, adaptive curriculum recommendations, topic mastery matrix in Progress, and zero prerequisite bypass. |
 | **TASK 09** | **Backend & Cloud Synchronization** | `NOT_STARTED` | Supabase authentication, PostgreSQL database persistence, match history sync, cloud study streak tracking. |
 | **TASK 10** | **Testing & Production** | `NOT_STARTED` | Comprehensive end-to-end testing, performance profiling, responsive cross-device verification, final production readiness. |
 
@@ -29,10 +29,10 @@ This roadmap tracks all 10 architectural and feature tasks for building the **CH
 
 ## Phase Metrics
 - **Total Tasks**: 10
-- **Completed**: 5
-- **In Progress**: 1
-- **Remaining**: 4
-- **Current Milestone**: TASK 06 Acceptance Gap Closure — Awaiting Review & Approval
+- **Completed**: 8
+- **In Progress**: 0
+- **Remaining**: 2
+- **Current Milestone**: TASK 08 Complete — Awaiting User Approval to Start TASK 09
 
 
 

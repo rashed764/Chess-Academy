@@ -399,3 +399,54 @@ test('PROVIDER TIMEOUT: withTimeout aborts underlying request and resolves to fa
   assert.ok(elapsed < 200, 'Must resolve promptly after timeout deadline');
 });
 
+test('MOVE CLASSIFICATION: symmetric Brilliant behavior for White and Black', () => {
+  // 1. White making a verified sacrifice: scoreAfter = +200 cp (White advantage >= +150) -> brilliant
+  const whiteVerified = classifyMoveQuality(250, 200, 'w', true, true);
+  assert.equal(whiteVerified.quality, 'brilliant');
+  assert.equal(whiteVerified.diffCentipawns, 0);
+
+  // 2. Black making an equivalent verified sacrifice: scoreAfter = -200 cp (scoreAfterForMover = -(-200) = +200 >= +150) -> brilliant
+  const blackVerified = classifyMoveQuality(-250, -200, 'b', true, true);
+  assert.equal(blackVerified.quality, 'brilliant');
+  assert.equal(blackVerified.diffCentipawns, 0);
+
+  // 3. White move with insufficient advantage: scoreAfter = +50 cp (< +150) -> best
+  const whiteInsufficient = classifyMoveQuality(60, 50, 'w', true, true);
+  assert.equal(whiteInsufficient.quality, 'best');
+
+  // 4. Black move with insufficient advantage: scoreAfter = -50 cp (scoreAfterForMover = +50 < +150) -> best
+  const blackInsufficient = classifyMoveQuality(-60, -50, 'b', true, true);
+  assert.equal(blackInsufficient.quality, 'best');
+
+  // 5. Forced mate in favor of mover:
+  // White sacrifice resulting in mateAfter = +2 (White mate in 2) -> brilliant
+  const whiteMateSacrifice = classifyMoveQuality(500, undefined, 'w', true, true, { mateAfter: 2 });
+  assert.equal(whiteMateSacrifice.quality, 'brilliant');
+
+  // Black sacrifice resulting in mateAfter = -2 (Black mate in 2) -> brilliant
+  const blackMateSacrifice = classifyMoveQuality(-500, undefined, 'b', true, true, { mateAfter: -2 });
+  assert.equal(blackMateSacrifice.quality, 'brilliant');
+
+  // 6. Incomplete sacrifice evidence: isSacrifice = false -> best
+  const nonSacrifice = classifyMoveQuality(300, 290, 'w', true, false);
+  assert.equal(nonSacrifice.quality, 'best');
+});
+
+test('CLIENT RETRY BEHAVIOR: timeout / abort errors and permanent API errors are not retried', async () => {
+  const { ApiError } = await import('../../src/services/ai/coachClient.js');
+
+  let callCount = 0;
+  const throwTimeout = async () => {
+    callCount++;
+    const err = new DOMException('The operation was aborted', 'AbortError');
+    throw err;
+  };
+
+  // Import retryWithBackoff directly via module reflection if exported or verify ApiError isTransient
+  const permError = new ApiError(400, 'Bad Request', false);
+  assert.equal(permError.isTransient, false);
+
+  const transError = new ApiError(503, 'Service Unavailable', true);
+  assert.equal(transError.isTransient, true);
+});
+

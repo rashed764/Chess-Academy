@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { getGeminiClient, COACH_MODEL } from './geminiClient';
+import { getGeminiClient, getActiveModel } from './geminiClient';
 import type {
   HintStage,
   MoveQuality,
@@ -96,11 +96,13 @@ export function classifyMoveQuality(
   }
 
   // Convert before and after evaluations to mover perspective
+  // Engine values from Stockfish are White-positive (+ = White advantage, - = Black advantage).
+  // scoreAfterForMover = moverColor === 'w' ? scoreAfterWhiteCp : -scoreAfterWhiteCp
   const beforeMover = toMoverPerspective(scoreBeforeCentipawns, options?.mateBefore, moverColor);
-  const afterMover = toMoverPerspective(scoreAfterCentipawns, options?.mateAfter, moverColor);
+  const scoreAfterForMover = toMoverPerspective(scoreAfterCentipawns, options?.mateAfter, moverColor);
 
   // If evaluations are missing and move does not explicitly match bestMove -> unclassified
-  if (beforeMover === undefined || afterMover === undefined) {
+  if (beforeMover === undefined || scoreAfterForMover === undefined) {
     if (isBestMove) {
       return {
         quality: 'best',
@@ -116,22 +118,22 @@ export function classifyMoveQuality(
 
   // Brilliant classification: engine-grounded criteria
   // A move is brilliant ONLY IF:
-  // 1. It is the best move (or within 10 cp of best)
-  // 2. Material is sacrificed
-  // 3. The resulting position maintains a decisive advantage (>= +150 cp) or forced mate
-  // If a sacrifice cannot be established with verified engine proof, we conservatively return 'best'.
+  // 1. It is the best move (or matches engine recommendation)
+  // 2. Material is sacrificed (isSacrifice === true)
+  // 3. The resulting position maintains a decisive mover-relative advantage (scoreAfterForMover >= 150 cp or mate)
+  // Note: For Black, a White-positive score of -200 cp yields scoreAfterForMover = +200 cp >= 150 cp.
   if (isBestMove && isSacrifice) {
-    if (afterMover >= 150) {
+    if (scoreAfterForMover >= 150) {
       return {
         quality: 'brilliant',
         diffCentipawns: 0,
-        boundaryRule: 'Brilliant: sound sacrifice maintaining decisive advantage (>= +150 cp or mate)',
+        boundaryRule: 'Brilliant: sound sacrifice maintaining decisive advantage (scoreAfterForMover >= +150 cp or mate)',
       };
     }
     return {
       quality: 'best',
       diffCentipawns: 0,
-      boundaryRule: 'Best move (conservative rating; sacrifice lacks decisive advantage)',
+      boundaryRule: 'Best move (conservative rating; sacrifice lacks decisive mover advantage)',
     };
   }
 
@@ -144,8 +146,8 @@ export function classifyMoveQuality(
   }
 
   // Calculate centipawn drop from mover's perspective:
-  // diff = scoreBefore - scoreAfter (if score decreased for mover, mover lost equity)
-  const diff = beforeMover - afterMover;
+  // diff = beforeMover - scoreAfterForMover (if score decreased for mover, mover lost equity)
+  const diff = beforeMover - scoreAfterForMover;
   const evalLoss = Math.max(0, diff);
 
   // Exact boundary conditions
@@ -238,8 +240,14 @@ export function generateLocalFallbackHint(
 }
 
 /**
- * Safely executes a promise with an upper bound timeout (10s default),
- * aborting the underlying network request via AbortController and returning fallbackVal.
+ * Safely executes a promise with an upper bound client timeout (10s default),
+ * canceling client-side HTTP socket wait via AbortController and returning fallbackVal.
+ * 
+ * NOTE ON SDK SEMANTICS:
+ * Per the official @google/genai SDK documentation, AbortSignal is a client-only operation.
+ * Aborting the client wait prevents server thread blocking, but does NOT guarantee cancellation
+ * of processing already in-flight on Google's service infrastructure.
+ * Timed-out requests are NOT resubmitted or retried.
  */
 async function withTimeout<T>(
   action: ((signal: AbortSignal) => Promise<T>) | Promise<T>,
@@ -250,7 +258,7 @@ async function withTimeout<T>(
   let timer: NodeJS.Timeout;
   const timeoutPromise = new Promise<T>((resolve) => {
     timer = setTimeout(() => {
-      console.warn(`[CoachService] Gemini request exceeded timeout of ${timeoutMs}ms, aborting underlying request and resolving to fallback`);
+      console.warn(`[CoachService] Gemini request exceeded client wait deadline of ${timeoutMs}ms, aborting client wait and resolving to local fallback`);
       controller.abort();
       resolve(fallbackVal);
     }, timeoutMs);
@@ -306,7 +314,7 @@ Respond strictly with a JSON object matching this schema:
 }`;
 
       const response = await gemini.models.generateContent({
-        model: COACH_MODEL,
+        model: getActiveModel(),
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -422,7 +430,7 @@ Respond strictly in JSON:
 }`;
 
       const response = await gemini.models.generateContent({
-        model: COACH_MODEL,
+        model: getActiveModel(),
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -539,7 +547,7 @@ Respond strictly in JSON:
 }`;
 
       const response = await gemini.models.generateContent({
-        model: COACH_MODEL,
+        model: getActiveModel(),
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -605,7 +613,7 @@ Respond with clear pedagogical insight, encouraging tone, and accurate chess ter
       ];
 
       const response = await gemini.models.generateContent({
-        model: COACH_MODEL,
+        model: getActiveModel(),
         contents: formattedContents as any,
         config: {
           abortSignal: signal,

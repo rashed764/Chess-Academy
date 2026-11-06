@@ -1,6 +1,6 @@
 # Known Issues & Environmental Constraints
 
-## Current Status (Task 05 Completion & Verification Audit)
+## Current Status (Task 06 Extension Completion)
 
 | Area | Issue / Boundary | Severity | Mitigation / Resolution Plan |
 | :--- | :--- | :--- | :--- |
@@ -13,9 +13,13 @@
 | **Opponent Move Highlighting** | Counter-moves had no coordinate exposure | **RESOLVED in Task 05 Recovery** | `MoveAttemptResult` exposes `opponentReplyDetails`; `ExerciseBoard` highlights opponent move squares. |
 | **Curriculum Type Contracts** | Duplicated diverging interfaces | **RESOLVED in Task 05 Recovery** | `src/types/curriculum.ts` re-exports canonical types from `src/features/training/types.ts`. |
 | **Position-Aware Move Matching** | Raw string stripping could misinterpret notations | **RESOLVED in Task 05 Recovery** | `playSanOrUci` and `doesMoveMatchTarget` resolve legal moves against `chess.moves({ verbose: true })`. |
-| **Cloud AI Coaching** | Server-side Gemini API integration | **RESOLVED in Task 06** | Express backend `/api/coach` endpoints with Gemini 3.8 Flash, rate limiting, FEN validation, 3-stage progressive hints, move classification, and deterministic fallback. |
+| **Cloud AI Coaching** | Server-side Gemini API integration | **RESOLVED in Task 06** | Express backend `/api/coach` endpoints with Gemini models, rate limiting, FEN validation, 3-stage progressive hints, move classification, and deterministic fallback. |
+| **AI Provider & Key Management** | Dynamic provider config & model selection | **RESOLVED in Task 06 Ext** | Encrypted server storage (`data/provider_config.enc`), AES-256-GCM encryption, key masking (`••••1234`), dynamic model discovery via `ai.models.list()`, centralized `getActiveModel()` lookup, and Settings UI. |
+| **Test Arena Assessment Mode** | Unbiased evaluation, ACPL, and diagnostic reporting | **RESOLVED in Task 07** | Strict cognitive isolation boundary (zero hints/AI/eval bar during play), post-game Stockfish WASM evaluation at depth 8+, mover-perspective centipawn loss, custom bounded accuracy heuristic, phase breakdown, and local storage recovery. |
+| **Personalized Learning Engine** | Evidence synthesis, weakness detection, adaptive recommendations | **RESOLVED in Task 08** | Ingestion of actual training attempts and arena diagnostics, 10 educational categories, conservative weakness thresholds (no weakness on single errors), canonical curriculum integrity, and local persistence. |
 | **In-Memory Rate Limiter Boundary** | Token bucket is in-memory per Node process. | Architectural Limitation | State resets on server restart and is not shared across multi-node clusters. Acceptable for single-instance applet; Task 09 can integrate Redis if distributed clustering is required. |
 | **Container LLM Egress / Credentials** | External API egress or missing API key in container environment. | Environmental Boundary | Guarded with 10-second timeout and high-fidelity deterministic local fallback (`source: 'local_fallback'`). App remains 100% operational offline. |
+| **Gemini AbortSignal SDK Semantics** | AbortSignal in @google/genai SDK is a client-only operation | Client SDK Boundary | Aborting client wait cancels server HTTP socket reading to prevent thread blocking, but does not guarantee remote Google service cancellation. Timed-out requests resolve immediately to deterministic fallback without retrying. |
 | **Supabase Cloud Sync** | Supabase project is not yet provisioned. | Low (Scheduled) | Safe boundary check returns `null`. Works out-of-the-box in local preview mode. Scheduled for **TASK 09: Backend & Cloud Synchronization**. |
 | **Hot Module Replacement (HMR)** | HMR disabled by container policy (`DISABLE_HMR=true`). | Environment | Dev server restarted after code updates. |
 
@@ -25,5 +29,4 @@
 - **Zero Pseudo-Technical Clutter**: UI remains strictly chess-first without artificial telemetry, mock compiler badges, or synthetic rating awards.
 - **Accurate Chess Integrity**: No fabricated FIDE accreditation, master titles, or guaranteed progression promises. Stockfish WASM and chess.js are the sole authority for chess truth.
 - **Strict Scope Separation**: Only Tasks 01–06 scope implemented; no premature Test Arena implementation added.
-- **Purely Optional Credentials**: No credentials required to preview or run the application. Deterministic local fallbacks provide full functionality even without `GEMINI_API_KEY`.
-
+- **Purely Optional Credentials**: No credentials required to preview or run the application. Deterministic local fallbacks provide full functionality even without custom credentials.

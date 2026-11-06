@@ -12,9 +12,12 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
 import { playChessClick, playChime } from '../../utils/sound';
+import { usePersonalizedLearning } from '../learning-engine/hooks/usePersonalizedLearning';
+import { PersonalizedFocusCard } from '../learning-engine/components/PersonalizedFocusCard';
 
 export const DashboardPage: React.FC = () => {
   const { currentProfile } = useAppStore();
+  const { activePlan, recommendations, hasSufficientData, refreshProfile } = usePersonalizedLearning();
 
   const handleActionClick = () => {
     playChessClick(currentProfile.settings.soundEnabled, 0.7);
@@ -92,6 +95,16 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* 1.5. Adaptive Educational Guidance & Personalized Plan */}
+      <section>
+        <PersonalizedFocusCard
+          plan={activePlan}
+          recommendations={recommendations}
+          hasSufficientData={hasSufficientData}
+          onRefresh={refreshProfile}
+        />
       </section>
 
       {/* 2. The Three Primary Pillars: Quick Match, Training Academy, Test Arena */}

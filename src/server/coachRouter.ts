@@ -1,5 +1,16 @@
 import { Router, type Request, type Response } from 'express';
-import { isGeminiConfigured, COACH_MODEL } from './geminiClient';
+import {
+  isGeminiConfigured,
+  getActiveModel,
+  listAvailableModels,
+  COACH_MODEL,
+} from './geminiClient';
+import {
+  getConfigStatus,
+  setApiKey,
+  removeApiKey,
+  setActiveModelId,
+} from './configManager';
 import { createRateLimiter } from './rateLimiter';
 import {
   validateFen,
@@ -25,14 +36,140 @@ coachRouter.use(createRateLimiter(60, 60 / (60 * 1000)));
  * Returns current configuration status and model. Never exposes API key.
  */
 coachRouter.get('/status', (_req: Request, res: Response) => {
+  const status = getConfigStatus();
   res.json({
     configured: isGeminiConfigured(),
-    model: COACH_MODEL,
+    model: getActiveModel(),
+    maskedKey: status.maskedKey,
+    isCustomKey: status.isCustomKey,
     provider: 'Google Gemini',
     serverTime: new Date().toISOString(),
   });
 });
 
+/**
+ * GET /api/coach/config
+ * Returns current encrypted storage configuration status.
+ */
+coachRouter.get('/config', (_req: Request, res: Response) => {
+  res.json(getConfigStatus());
+});
+
+/**
+ * POST /api/coach/config/key
+ * Saves and encrypts a user-supplied Gemini API key.
+ */
+coachRouter.post('/config/key', (req: Request, res: Response): void => {
+  const { apiKey } = req.body || {};
+  if (typeof apiKey !== 'string' || apiKey.trim() === '') {
+    res.status(400).json({ error: 'Invalid API Key', message: 'API key must be a non-empty string.' });
+    return;
+  }
+
+  try {
+    setApiKey(apiKey);
+    res.json({
+      success: true,
+      message: 'API Key saved and encrypted successfully.',
+      status: getConfigStatus(),
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: 'Failed to save API Key',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+/**
+ * DELETE /api/coach/config/key
+ * Removes custom API key from server encrypted storage.
+ */
+coachRouter.delete('/config/key', (_req: Request, res: Response): void => {
+  try {
+    removeApiKey();
+    res.json({
+      success: true,
+      message: 'Custom API Key removed.',
+      status: getConfigStatus(),
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: 'Failed to remove API Key',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+/**
+ * POST /api/coach/config/test
+ * Tests connection to Gemini API using current or candidate key.
+ */
+coachRouter.post('/config/test', async (req: Request, res: Response): Promise<void> => {
+  const { apiKey } = req.body || {};
+  const testKey = typeof apiKey === 'string' && apiKey.trim() !== '' ? apiKey.trim() : undefined;
+
+  try {
+    const models = await listAvailableModels(testKey);
+    res.json({
+      success: true,
+      message: 'Connection to Gemini API verified successfully.',
+      modelCount: models.length,
+      sampleModel: models[0]?.id || COACH_MODEL,
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      error: 'Gemini Connection Test Failed',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+/**
+ * GET /api/coach/config/models
+ * Dynamically fetches available text generation models from Gemini API.
+ */
+coachRouter.get('/config/models', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const models = await listAvailableModels();
+    res.json({
+      models,
+      activeModelId: getActiveModel(),
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: 'Failed to list models',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+/**
+ * POST /api/coach/config/model
+ * Sets the active Gemini model ID.
+ */
+coachRouter.post('/config/model', (req: Request, res: Response): void => {
+  const { modelId } = req.body || {};
+  if (typeof modelId !== 'string' || modelId.trim() === '') {
+    res.status(400).json({ error: 'Invalid Model ID', message: 'Model ID must be a non-empty string.' });
+    return;
+  }
+
+  try {
+    setActiveModelId(modelId);
+    res.json({
+      success: true,
+      activeModelId: getActiveModel(),
+      message: `Active AI model set to ${modelId}`,
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: 'Failed to set active model',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
 
 /**
  * POST /api/coach/hint
