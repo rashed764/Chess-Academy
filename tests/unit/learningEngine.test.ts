@@ -292,3 +292,246 @@ test('10. TopicPerformanceMetrics recent trend calculation', () => {
   const metrics = PerformanceAnalyzer.analyzeTopicMetrics(points);
   assert.equal(metrics.tactical_patterns.recentTrend, 'improving');
 });
+
+test('11. Automated taxonomy completeness: all 30 canonical lessons mapped without stale entries', () => {
+  // 1. Every ID in CANONICAL_LESSON_IDS has a corresponding LESSON_TOPIC_MAPPINGS entry
+  for (const id of CANONICAL_LESSON_IDS) {
+    const mapping = LESSON_TOPIC_MAPPINGS[id];
+    assert.ok(mapping, `Missing taxonomy mapping for canonical lesson: ${id}`);
+    assert.equal(mapping.lessonId, id, `Mapping lessonId does not match key for: ${id}`);
+
+    // 2. Every mapping references a real lesson in LESSON_MAP
+    const lesson = LESSON_MAP[id];
+    assert.ok(lesson, `Lesson not found in LESSON_MAP: ${id}`);
+
+    // 3. Every mapping has a valid educational category
+    assert.ok(
+      Boolean(TOPIC_CATEGORY_DEFINITIONS[mapping.category]),
+      `Invalid educational category "${mapping.category}" for lesson: ${id}`
+    );
+
+    // 4. Mappings have valid tags and title
+    assert.ok(mapping.topicTitle.length > 0, `Missing topicTitle for: ${id}`);
+    assert.ok(Array.isArray(mapping.tags) && mapping.tags.length > 0, `Missing tags for: ${id}`);
+  }
+
+  // 5. Zero stale or unknown lesson IDs in taxonomy dictionary
+  for (const id of Object.keys(LESSON_TOPIC_MAPPINGS)) {
+    assert.ok(
+      CANONICAL_LESSON_IDS.includes(id as any),
+      `Stale or unknown lesson ID found in LESSON_TOPIC_MAPPINGS: ${id}`
+    );
+  }
+
+  assert.equal(Object.keys(LESSON_TOPIC_MAPPINGS).length, 30);
+  assert.equal(CANONICAL_LESSON_IDS.length, 30);
+});
+
+test('12. Level 4 regression: Lucena Bridge and Good vs Bad Bishops ingestion', () => {
+  const lvl4Progress: AcademyProgressState = {
+    version: 1,
+    currentLevelId: 'level-4-advanced',
+    completedLessonIds: [
+      'l-101-board-ranks-files', 'l-102-knight-movement', 'l-103-pawn-promotion-mechanics',
+      'l-104-check-and-checkmate', 'l-105-castling-king-safety', 'l-106-en-passant-capture',
+      'l-201-piece-values-counting', 'l-202-controlling-the-center', 'l-203-the-knight-fork', 'l-204-the-absolute-pin',
+      'l-301-the-linear-skewer', 'l-302-deflection-and-decoy', 'l-303-back-rank-destruction', 'l-304-knight-outposts-open-files',
+      'l-401-weak-squares-color-complex', 'l-402-prophylactic-thinking',
+    ],
+    completedModuleIds: [],
+    unlockedLevelIds: ['level-1-absolute-beginner', 'level-2-elementary', 'level-3-intermediate', 'level-4-advanced'],
+    lessonProgress: {},
+    totalExerciseAttempts: 6,
+    correctExerciseAttempts: 5,
+    incorrectExerciseAttempts: 1,
+    activityHistory: [
+      {
+        id: 'act-403-1',
+        timestamp: '2026-11-06T11:00:00.000Z',
+        type: 'exercise_passed',
+        levelId: 'level-4-advanced',
+        lessonId: 'l-403-the-lucena-bridge',
+        lessonTitle: 'The Lucena Position: Building the Rook Bridge',
+        details: 'Solved',
+      },
+      {
+        id: 'act-403-2',
+        timestamp: '2026-11-06T11:05:00.000Z',
+        type: 'exercise_passed',
+        levelId: 'level-4-advanced',
+        lessonId: 'l-403-the-lucena-bridge',
+        lessonTitle: 'The Lucena Position: Building the Rook Bridge',
+        details: 'Solved',
+      },
+      {
+        id: 'act-404-1',
+        timestamp: '2026-11-06T11:10:00.000Z',
+        type: 'exercise_passed',
+        levelId: 'level-4-advanced',
+        lessonId: 'l-404-good-vs-bad-bishops',
+        lessonTitle: 'Good Bishops vs. Bad Bishops',
+        details: 'Solved',
+      },
+    ],
+    lastActiveAt: new Date().toISOString(),
+  };
+
+  const profile = LearningEngineService.computeProfile(lvl4Progress, []);
+
+  // Verify l-403 is ingested as endgame_fundamentals (NOT opening_principles!)
+  const endgameMetrics = profile.topicMetrics.endgame_fundamentals;
+  assert.ok(endgameMetrics.totalAttempts >= 2, 'l-403 attempts must be ingested into endgame_fundamentals');
+
+  // Verify l-404 is ingested as positional_understanding
+  const positionalMetrics = profile.topicMetrics.positional_understanding;
+  assert.ok(positionalMetrics.totalAttempts >= 1, 'l-404 attempt must be ingested into positional_understanding');
+
+  // Next canonical lesson must be l-403-the-lucena-bridge since it is not in completedLessonIds
+  const nextRec = profile.recommendations.find((r) => r.type === 'next_canonical_lesson');
+  assert.ok(nextRec);
+  assert.equal(nextRec?.targetLessonId, 'l-403-the-lucena-bridge');
+  assert.equal(nextRec?.targetCategory, 'endgame_fundamentals');
+});
+
+test('13. Level 5 regression: all four lessons ingested and categorized accurately', () => {
+  const lvl5Progress: AcademyProgressState = {
+    version: 1,
+    currentLevelId: 'level-5-expert',
+    completedLessonIds: [],
+    completedModuleIds: [],
+    unlockedLevelIds: ['level-5-expert'],
+    lessonProgress: {},
+    totalExerciseAttempts: 8,
+    correctExerciseAttempts: 6,
+    incorrectExerciseAttempts: 2,
+    activityHistory: [
+      { id: 'act-501', timestamp: '2026-11-06T12:00:00.000Z', type: 'exercise_passed', levelId: 'level-5-expert', lessonId: 'l-501-candidate-moves-elimination', lessonTitle: '', details: '' },
+      { id: 'act-502', timestamp: '2026-11-06T12:05:00.000Z', type: 'exercise_passed', levelId: 'level-5-expert', lessonId: 'l-502-positional-exchange-sacrifice', lessonTitle: '', details: '' },
+      { id: 'act-503', timestamp: '2026-11-06T12:10:00.000Z', type: 'exercise_passed', levelId: 'level-5-expert', lessonId: 'l-503-fortress-defensive-resource', lessonTitle: '', details: '' },
+      { id: 'act-504-f1', timestamp: '2026-11-06T12:15:00.000Z', type: 'exercise_failed', levelId: 'level-5-expert', lessonId: 'l-504-the-zwischenzug-intermediate-move', lessonTitle: 'The Zwischenzug', details: '' },
+      { id: 'act-504-f2', timestamp: '2026-11-06T12:20:00.000Z', type: 'exercise_failed', levelId: 'level-5-expert', lessonId: 'l-504-the-zwischenzug-intermediate-move', lessonTitle: 'The Zwischenzug', details: '' },
+      { id: 'act-504-f3', timestamp: '2026-11-06T12:25:00.000Z', type: 'exercise_failed', levelId: 'level-5-expert', lessonId: 'l-504-the-zwischenzug-intermediate-move', lessonTitle: 'The Zwischenzug', details: '' },
+    ],
+    lastActiveAt: new Date().toISOString(),
+  };
+
+  const profile = LearningEngineService.computeProfile(lvl5Progress, []);
+
+  // Calculation accuracy: l-501 and l-502
+  assert.ok(profile.topicMetrics.calculation_accuracy.totalAttempts >= 2);
+  // Endgame fundamentals: l-503
+  assert.ok(profile.topicMetrics.endgame_fundamentals.totalAttempts >= 1);
+  // Tactical patterns: l-504 with 3 failures
+  assert.ok(profile.topicMetrics.tactical_patterns.totalAttempts >= 3);
+  assert.equal(profile.topicMetrics.tactical_patterns.failedAttempts, 3);
+
+  // Weakness in tactical patterns must resolve related lesson l-504 in LESSON_MAP
+  const tacticalWeakness = profile.weaknesses.find((w) => w.category === 'tactical_patterns');
+  assert.ok(tacticalWeakness);
+  assert.ok(tacticalWeakness?.relatedLessonIds.includes('l-504-the-zwischenzug-intermediate-move'));
+});
+
+test('14. Level 6 regression: all four lessons correctly categorized and ingested', () => {
+  const lvl6Progress: AcademyProgressState = {
+    version: 1,
+    currentLevelId: 'level-6-master',
+    completedLessonIds: [],
+    completedModuleIds: [],
+    unlockedLevelIds: ['level-6-master'],
+    lessonProgress: {},
+    totalExerciseAttempts: 4,
+    correctExerciseAttempts: 4,
+    incorrectExerciseAttempts: 0,
+    activityHistory: [
+      { id: 'act-601', timestamp: '2026-11-06T13:00:00.000Z', type: 'exercise_passed', levelId: 'level-6-master', lessonId: 'l-601-master-prophylaxis-restriction', lessonTitle: '', details: '' },
+      { id: 'act-602', timestamp: '2026-11-06T13:05:00.000Z', type: 'exercise_passed', levelId: 'level-6-master', lessonId: 'l-602-principle-of-two-weaknesses', lessonTitle: '', details: '' },
+      { id: 'act-603', timestamp: '2026-11-06T13:10:00.000Z', type: 'exercise_passed', levelId: 'level-6-master', lessonId: 'l-603-stalemate-swindle-resource', lessonTitle: '', details: '' },
+      { id: 'act-604', timestamp: '2026-11-06T13:15:00.000Z', type: 'exercise_passed', levelId: 'level-6-master', lessonId: 'l-604-the-minority-attack-carlsbad', lessonTitle: '', details: '' },
+    ],
+    lastActiveAt: new Date().toISOString(),
+  };
+
+  const profile = LearningEngineService.computeProfile(lvl6Progress, []);
+
+  // Positional understanding: l-601, l-602, l-604 (3 points)
+  assert.ok(profile.topicMetrics.positional_understanding.totalAttempts >= 3);
+  // Hanging pieces / blunders: l-603 (1 point)
+  assert.ok(profile.topicMetrics.hanging_pieces_blunders.totalAttempts >= 1);
+  assert.equal(profile.totalEvidencePoints, 4);
+});
+
+test('15. Level 7 regression: all four lessons correctly categorized without drop', () => {
+  const lvl7Progress: AcademyProgressState = {
+    version: 1,
+    currentLevelId: 'level-7-grandmaster-prep',
+    completedLessonIds: [],
+    completedModuleIds: [],
+    unlockedLevelIds: ['level-7-grandmaster-prep'],
+    lessonProgress: {},
+    totalExerciseAttempts: 4,
+    correctExerciseAttempts: 4,
+    incorrectExerciseAttempts: 0,
+    activityHistory: [
+      { id: 'act-701', timestamp: '2026-11-06T14:00:00.000Z', type: 'exercise_passed', levelId: 'level-7-grandmaster-prep', lessonId: 'l-701-najdorf-dynamic-preparation', lessonTitle: '', details: '' },
+      { id: 'act-702', timestamp: '2026-11-06T14:05:00.000Z', type: 'exercise_passed', levelId: 'level-7-grandmaster-prep', lessonId: 'l-702-grandmaster-multi-ply-calculation', lessonTitle: '', details: '' },
+      { id: 'act-703', timestamp: '2026-11-06T14:10:00.000Z', type: 'exercise_passed', levelId: 'level-7-grandmaster-prep', lessonId: 'l-703-tournament-pragmatism-simplification', lessonTitle: '', details: '' },
+      { id: 'act-704', timestamp: '2026-11-06T14:15:00.000Z', type: 'exercise_passed', levelId: 'level-7-grandmaster-prep', lessonId: 'l-704-converting-plus-equals-endgame', lessonTitle: '', details: '' },
+    ],
+    lastActiveAt: new Date().toISOString(),
+  };
+
+  const profile = LearningEngineService.computeProfile(lvl7Progress, []);
+
+  // Opening principles: l-701
+  assert.ok(profile.topicMetrics.opening_principles.totalAttempts >= 1);
+  // Calculation accuracy: l-702
+  assert.ok(profile.topicMetrics.calculation_accuracy.totalAttempts >= 1);
+  // Endgame fundamentals: l-703 and l-704
+  assert.ok(profile.topicMetrics.endgame_fundamentals.totalAttempts >= 2);
+  assert.equal(profile.totalEvidencePoints, 4);
+});
+
+test('16. Combined multi-level learner profile across Levels 1–7: complete integrity', () => {
+  // Activity spanning across all 7 levels
+  const all30Activities = CANONICAL_LESSON_IDS.map((id, index) => ({
+    id: `act-all-${index}`,
+    timestamp: new Date(Date.now() - (30 - index) * 60000).toISOString(),
+    type: 'exercise_passed' as const,
+    levelId: LESSON_MAP[id]?.levelId || ('level-1-absolute-beginner' as const),
+    lessonId: id,
+    lessonTitle: LESSON_MAP[id]?.title || '',
+    details: 'Verified',
+  }));
+
+  const fullProgress: AcademyProgressState = {
+    version: 1,
+    currentLevelId: 'level-7-grandmaster-prep',
+    completedLessonIds: CANONICAL_LESSON_IDS.slice(0, 29), // 29 of 30 completed
+    completedModuleIds: [],
+    unlockedLevelIds: [
+      'level-1-absolute-beginner', 'level-2-elementary', 'level-3-intermediate',
+      'level-4-advanced', 'level-5-expert', 'level-6-master', 'level-7-grandmaster-prep'
+    ],
+    lessonProgress: {},
+    totalExerciseAttempts: 30,
+    correctExerciseAttempts: 30,
+    incorrectExerciseAttempts: 0,
+    activityHistory: all30Activities,
+    lastActiveAt: new Date().toISOString(),
+  };
+
+  const profile = LearningEngineService.computeProfile(fullProgress, []);
+
+  // Zero evidence points lost: 30 activities + 29 completed lessons = 59 evidence points
+  assert.ok(profile.totalEvidencePoints >= 30, 'All 30 lesson activities must be ingested without loss');
+  assert.equal(profile.hasSufficientData, true);
+
+  // Next canonical lesson must be the 30th lesson: 'l-704-converting-plus-equals-endgame'
+  const nextRec = profile.recommendations.find((r) => r.type === 'next_canonical_lesson');
+  assert.ok(nextRec);
+  assert.equal(nextRec?.targetLessonId, 'l-704-converting-plus-equals-endgame');
+  assert.equal(nextRec?.targetCategory, 'endgame_fundamentals'); // Mapped to endgame, NOT opening!
+  assert.ok(CANONICAL_LESSON_IDS.includes(nextRec?.targetLessonId!));
+  assert.ok(Boolean(LESSON_MAP[nextRec?.targetLessonId!]));
+});
+

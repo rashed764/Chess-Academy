@@ -174,7 +174,7 @@ src/
    - Idempotent ingestion prevents duplicate points across storage reloads.
 
 2. **Educational Topic Taxonomy (`topicTaxonomy.ts`)**:
-   - Maps all 30 canonical curriculum lessons to 10 standardized educational categories:
+   - Maps all 30 canonical curriculum lessons (`CANONICAL_LESSON_IDS`) with 100% bidirectional synchronization to 10 standardized educational categories:
      - `tactical_patterns`
      - `hanging_pieces_blunders`
      - `checkmate_patterns`
@@ -185,6 +185,7 @@ src/
      - `endgame_fundamentals`
      - `calculation_accuracy`
      - `time_management`
+   - Automated completeness tests verify zero unmapped, zero stale, and 100% valid dictionary entries against `curriculumData.ts`.
 
 3. **Conservative Performance & Weakness Analysis (`PerformanceAnalyzer`)**:
    - Minimum sample thresholds enforce confidence tiers (`insufficient`, `low`, `moderate`, `high`).
@@ -206,7 +207,42 @@ src/
 
 ---
 
-## 8. Master Task Roadmap Sequence
+## 8. Backend & Cloud Synchronization Architecture (TASK 09)
+
+1. **Authentication Architecture (`src/services/supabase/authService.ts`)**:
+   - Supabase Auth SDK integration supporting user registration, email/password login, logout, and session restoration.
+   - Non-crashing boundary check: If `!isSupabaseReady()`, returns clean typed error responses without throwing.
+   - Reactive event listener `onAuthStateChange` synchronizes app session on sign-in and token refreshes.
+
+2. **Database Security & Row Level Security (RLS) (`supabase/migrations/00002_cloud_synchronization.sql`)**:
+   - 100% of user data tables declare `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`:
+     - `profiles`: user metadata, board preferences, rating snapshots.
+     - `user_academy_progress`: academy levels, completed lessons, exercise attempt counts.
+     - `user_lesson_progress`: granular per-lesson state and attempt tallies.
+     - `user_activity_history`: activity log items.
+     - `test_arena_reports`: complete diagnostic match reports with JSONB results.
+     - `learner_profiles`: cached personalized learning profiles.
+   - Every table enforces strict user isolation via `auth.uid() = user_id` (or `id`) policies.
+   - Cascade deletion: `REFERENCES auth.users(id) ON DELETE CASCADE`.
+
+3. **Deterministic Bidirectional Synchronization Engine (`src/services/supabase/syncService.ts`)**:
+   - **Local-First Precedence**: All gameplay, lessons, and tests are saved to `localStorage` immediately. Local data is never wiped or corrupted by network failures.
+   - **Deterministic Conflict Resolution Rules**:
+     - Completed lessons & modules: Set union (`Array.from(new Set([...local, ...cloud]))`).
+     - Exercise attempts: Preserves higher verified count (`Math.max(local, cloud)`).
+     - Activity history: Deduplicated by unique `id`, reverse-chronologically sorted, capped at 50 items locally.
+     - Test Arena reports: Deduplicated by report `id`, favors `completed` assessments over `in_progress`.
+     - Settings & Profile: Last-write-wins based on `updatedAt` / `lastActiveAt`.
+     - Learner Profile: Deterministically recomputed on-device via `LearningEngineService.computeProfile()` from merged data and upserted back to cloud.
+   - **Offline Handling**: Monitored via `window` online/offline events and `navigator.onLine`. Sync transitions to `'offline'` and pauses gracefully.
+
+4. **Secret Security Boundary**:
+   - Gemini API keys and `CONFIG_ENCRYPTION_SECRET` stay on the Node/Express server in `data/provider_config.enc` using AES-256-GCM.
+   - Secrets are never persisted to Supabase tables or exposed to client-side scripts.
+
+---
+
+## 9. Master Task Roadmap Sequence
 
 1. **TASK 01 — Foundation & Project Setup** (COMPLETED)
 2. **TASK 02 — Premium UI & Dashboard** (COMPLETED)
@@ -216,5 +252,5 @@ src/
 6. **TASK 06 — AI Coach Intelligence** (COMPLETED)
 7. **TASK 07 — Test Arena** (COMPLETED)
 8. **TASK 08 — Personalized Learning Engine** (COMPLETED)
-9. **TASK 09 — Backend & Cloud Synchronization** (NEXT)
-10. **TASK 10 — Testing & Production**
+9. **TASK 09 — Backend & Cloud Synchronization** (COMPLETED)
+10. **TASK 10 — Testing & Production** (NEXT)

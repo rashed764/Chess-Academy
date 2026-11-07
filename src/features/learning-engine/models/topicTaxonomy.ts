@@ -244,94 +244,94 @@ export const LESSON_TOPIC_MAPPINGS: Record<string, LessonTopicMapping> = {
     topicTitle: 'Prophylaxis & Threat Prevention',
     tags: ['prophylaxis', 'defense', 'anticipation'],
   },
-  'l-403-lucena-and-philidor-rook-endings': {
-    lessonId: 'l-403-lucena-and-philidor-rook-endings',
+  'l-403-the-lucena-bridge': {
+    lessonId: 'l-403-the-lucena-bridge',
     category: 'endgame_fundamentals',
-    topicTitle: 'Theoretical Rook Endgames: Lucena & Philidor',
-    tags: ['rook_endgame', 'lucena', 'philidor'],
+    topicTitle: 'The Lucena Position: Building the Rook Bridge',
+    tags: ['rook_endgame', 'lucena', 'bridge', 'endgame'],
   },
-  'l-404-minor-piece-imbalances': {
-    lessonId: 'l-404-minor-piece-imbalances',
+  'l-404-good-vs-bad-bishops': {
+    lessonId: 'l-404-good-vs-bad-bishops',
     category: 'positional_understanding',
-    topicTitle: 'Bishop Pair vs Knight Tandem',
-    tags: ['minor_pieces', 'bishop_pair', 'imbalance'],
+    topicTitle: 'Good Bishops vs. Bad Bishops & Endgame Conversion',
+    tags: ['minor_pieces', 'bad_bishop', 'color_complex', 'strategy'],
   },
 
   // Level 5: Expert
-  'l-501-positional-exchange-sacrifice': {
-    lessonId: 'l-501-positional-exchange-sacrifice',
+  'l-501-candidate-moves-elimination': {
+    lessonId: 'l-501-candidate-moves-elimination',
+    category: 'calculation_accuracy',
+    topicTitle: 'Candidate Move Selection & Calculation Trees',
+    tags: ['candidate_moves', 'calculation_tree', 'kotov', 'accuracy'],
+  },
+  'l-502-positional-exchange-sacrifice': {
+    lessonId: 'l-502-positional-exchange-sacrifice',
     category: 'calculation_accuracy',
     topicTitle: 'The Positional Exchange Sacrifice',
     tags: ['exchange_sacrifice', 'calculation', 'long_term_compensation'],
   },
-  'l-502-isolated-queen-pawn-dynamics': {
-    lessonId: 'l-502-isolated-queen-pawn-dynamics',
-    category: 'positional_understanding',
-    topicTitle: 'Isolated Queen Pawn (IQP) Dynamics',
-    tags: ['iqp', 'pawn_structure', 'd4_break'],
+  'l-503-fortress-defensive-resource': {
+    lessonId: 'l-503-fortress-defensive-resource',
+    category: 'endgame_fundamentals',
+    topicTitle: 'Fortress Construction & Stalemate Geometry',
+    tags: ['fortress', 'stalemate', 'defense', 'endgame'],
   },
-  'l-503-pawn-structure-transformations': {
-    lessonId: 'l-503-pawn-structure-transformations',
-    category: 'positional_understanding',
-    topicTitle: 'Pawn Structure Liquidations',
-    tags: ['pawn_chains', 'transformation', 'structure'],
-  },
-  'l-504-zwischenzug-intermediate-moves': {
-    lessonId: 'l-504-zwischenzug-intermediate-moves',
+  'l-504-the-zwischenzug-intermediate-move': {
+    lessonId: 'l-504-the-zwischenzug-intermediate-move',
     category: 'tactical_patterns',
-    topicTitle: 'Zwischenzug (Intermediate In-Between Moves)',
-    tags: ['zwischenzug', 'intermediate_move', 'tactics'],
+    topicTitle: 'The Zwischenzug: The In-Between Attack',
+    tags: ['zwischenzug', 'intermediate_move', 'tactics', 'in_between'],
   },
 
   // Level 6: Master
-  'l-601-dynamic-piece-sacrifices-initiative': {
-    lessonId: 'l-601-dynamic-piece-sacrifices-initiative',
-    category: 'calculation_accuracy',
-    topicTitle: 'Dynamic Sacrifices for the Initiative',
-    tags: ['sacrifice', 'initiative', 'attack'],
-  },
-  'l-602-complex-opposite-colored-bishops': {
-    lessonId: 'l-602-complex-opposite-colored-bishops',
-    category: 'endgame_fundamentals',
-    topicTitle: 'Opposite-Colored Bishop Endgames',
-    tags: ['opposite_bishops', 'endgame', 'drawing_resource'],
-  },
-  'l-603-defensive-resourcefulness-swindles': {
-    lessonId: 'l-603-defensive-resourcefulness-swindles',
-    category: 'hanging_pieces_blunders',
-    topicTitle: 'Defensive Resilience & Stalemate Swindles',
-    tags: ['defense', 'stalemate', 'swindle'],
-  },
-  'l-604-carlsbad-minority-attack': {
-    lessonId: 'l-604-carlsbad-minority-attack',
+  'l-601-master-prophylaxis-restriction': {
+    lessonId: 'l-601-master-prophylaxis-restriction',
     category: 'positional_understanding',
-    topicTitle: 'The Carlsbad Minority Attack',
-    tags: ['carlsbad', 'minority_attack', 'queens_gambit'],
+    topicTitle: 'Master Restriction Strategy & The Squeeze',
+    tags: ['restriction', 'prophylaxis', 'karpov', 'clamp'],
+  },
+  'l-602-principle-of-two-weaknesses': {
+    lessonId: 'l-602-principle-of-two-weaknesses',
+    category: 'positional_understanding',
+    topicTitle: 'The Principle of Two Weaknesses in Endgames',
+    tags: ['two_weaknesses', 'seventh_rank', 'endgame_strategy'],
+  },
+  'l-603-stalemate-swindle-resource': {
+    lessonId: 'l-603-stalemate-swindle-resource',
+    category: 'hanging_pieces_blunders',
+    topicTitle: 'The Desperado Rook & Stalemate Swindles',
+    tags: ['desperado', 'stalemate', 'swindle', 'blunder_recovery'],
+  },
+  'l-604-the-minority-attack-carlsbad': {
+    lessonId: 'l-604-the-minority-attack-carlsbad',
+    category: 'positional_understanding',
+    topicTitle: 'The Minority Attack: Carlsbad Structure Mastery',
+    tags: ['carlsbad', 'minority_attack', 'pawn_structure', 'strategy'],
   },
 
   // Level 7: Grandmaster Preparation
-  'l-701-concrete-calculation-candidate-moves': {
-    lessonId: 'l-701-concrete-calculation-candidate-moves',
+  'l-701-najdorf-dynamic-preparation': {
+    lessonId: 'l-701-najdorf-dynamic-preparation',
+    category: 'opening_principles',
+    topicTitle: 'Deep Sicilian Najdorf: The English Attack Dynamics',
+    tags: ['najdorf', 'sicilian', 'english_attack', 'opening_preparation'],
+  },
+  'l-702-grandmaster-multi-ply-calculation': {
+    lessonId: 'l-702-grandmaster-multi-ply-calculation',
     category: 'calculation_accuracy',
-    topicTitle: 'Candidate Moves & Kotov Tree Calculation',
-    tags: ['candidate_moves', 'calculation_tree', 'visualization'],
+    topicTitle: 'Grandmaster Multi-Ply Calculation Under Pressure',
+    tags: ['calculation_depth', 'piece_tension', 'multi_ply', 'accuracy'],
   },
-  'l-702-psychological-time-pressure-handling': {
-    lessonId: 'l-702-psychological-time-pressure-handling',
-    category: 'time_management',
-    topicTitle: 'Psychological Time Trouble Management',
-    tags: ['time_trouble', 'clock_pressure', 'practical_play'],
-  },
-  'l-703-elite-preparation-practical-endgames': {
-    lessonId: 'l-703-elite-preparation-practical-endgames',
+  'l-703-tournament-pragmatism-simplification': {
+    lessonId: 'l-703-tournament-pragmatism-simplification',
     category: 'endgame_fundamentals',
-    topicTitle: 'Elite Practical Endgame Technique',
-    tags: ['endgame_technique', 'conversion', 'prophylactic_endgame'],
+    topicTitle: 'Tournament Pragmatism & Technical Simplification',
+    tags: ['simplification', 'pragmatism', 'capablanca', 'endgame'],
   },
-  'l-704-king-centralization-endgames': {
-    lessonId: 'l-704-king-centralization-endgames',
+  'l-704-converting-plus-equals-endgame': {
+    lessonId: 'l-704-converting-plus-equals-endgame',
     category: 'endgame_fundamentals',
-    topicTitle: 'King Centralization in Technical Endgames',
-    tags: ['king_march', 'centralization', 'endgame'],
+    topicTitle: 'Converting Plus-Equals: Master King Centralization',
+    tags: ['king_march', 'centralization', 'plus_equals', 'endgame'],
   },
 };

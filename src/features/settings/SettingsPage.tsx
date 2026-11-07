@@ -13,6 +13,10 @@ import {
   Trash2,
   Lock,
   Sparkles,
+  Cloud,
+  LogIn,
+  LogOut,
+  ShieldCheck,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -22,10 +26,24 @@ import {
   type AIProviderConfigStatus,
   type DiscoveredModel,
 } from '../../services/ai/coachClient';
+import { useAuth } from '../auth/AuthContext';
+import { SyncStatusBadge } from '../auth/components/SyncStatusBadge';
+import { formatRelativeDate } from '../../utils/formatters';
 
 export const SettingsPage: React.FC = () => {
   const { currentProfile, updateSettings } = useAppStore();
   const settings = currentProfile.settings;
+  const {
+    user,
+    isAuthenticated,
+    signOut,
+    openAuthModal,
+    syncStatus,
+    lastSyncedAt,
+    triggerSync,
+    isConfigured,
+  } = useAuth();
+  const [isManualSyncing, setIsManualSyncing] = useState<boolean>(false);
 
   // AI Provider State
   const [configStatus, setConfigStatus] = useState<AIProviderConfigStatus | null>(null);
@@ -236,6 +254,128 @@ export const SettingsPage: React.FC = () => {
             </button>
           </div>
         )}
+
+        {/* Cloud Account & Cross-Device Persistence Section */}
+        <div className="rounded-xl border border-[#242938] bg-[#171A24] p-6 space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-[#242938]">
+            <div className="flex items-center gap-2">
+              <Cloud className="w-5 h-5 text-[#D6B36A]" />
+              <h3 className="text-sm font-bold text-[#F4F4F5] font-cinzel">
+                Cloud Account & Cross-Device Synchronization
+              </h3>
+            </div>
+            <SyncStatusBadge />
+          </div>
+
+          <p className="text-xs text-[#9297A5] leading-relaxed">
+            Chess Academy supports bidirectional cloud synchronization via Supabase PostgreSQL with strict Row Level Security (RLS). When signed in, curriculum completions, exercise statistics, and Test Arena battery evaluations synchronize across all your devices.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl bg-[#10121B]/60 border border-[#242938] space-y-3">
+              <span className="text-xs font-semibold text-[#F4F4F5] flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-[#D6B36A]" />
+                Supabase Session Status
+              </span>
+
+              {isAuthenticated ? (
+                <div className="space-y-2">
+                  <div className="text-xs text-emerald-400 font-semibold flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    Connected ({user?.email})
+                  </div>
+                  <p className="text-[11px] text-[#9297A5]">
+                    Account UID: <code className="font-mono text-zinc-300">{user?.id}</code>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => signOut()}
+                    className="px-3 py-1.5 rounded-lg bg-rose-950/30 hover:bg-rose-900/40 border border-rose-500/30 text-rose-300 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer mt-1"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Sign Out of Account
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="text-xs text-amber-400 font-semibold flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    Local Mode (Unauthenticated)
+                  </div>
+                  <p className="text-[11px] text-[#9297A5]">
+                    {isConfigured
+                      ? 'Sign in or register an account to sync your academy state to the cloud.'
+                      : 'Cloud backend is not configured in this environment. All data is securely kept in local storage.'}
+                  </p>
+                  {isConfigured && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => openAuthModal('signin')}
+                        className="px-3 py-1.5 rounded-lg bg-[#D6B36A] hover:bg-[#c4a159] text-zinc-950 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        Sign In
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openAuthModal('signup')}
+                        className="px-3 py-1.5 rounded-lg bg-[#171A24] hover:bg-[#1f2433] border border-[#242938] text-[#F4F4F5] text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        Create Account
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#10121B]/60 border border-[#242938] space-y-3">
+              <span className="text-xs font-semibold text-[#F4F4F5] flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <RefreshCw className="w-4 h-4 text-[#D6B36A]" />
+                  Sync Diagnostics & Trigger
+                </span>
+                <span className="text-[10px] font-mono text-zinc-400">{syncStatus.toUpperCase()}</span>
+              </span>
+
+              <div className="space-y-1 text-xs text-[#9297A5]">
+                <p className="text-[11px]">
+                  {lastSyncedAt
+                    ? `Last synced: ${formatRelativeDate(lastSyncedAt)}`
+                    : 'No sync cycle completed in current session.'}
+                </p>
+                <div className="text-[11px] font-mono text-zinc-400 bg-[#171A24] p-2 rounded border border-[#242938] space-y-0.5 mt-2">
+                  <div>Backend Engine: {isConfigured ? 'Supabase (Connected)' : 'None (Local-first)'}</div>
+                  <div>Conflict Resolution: Deterministic Union & Max Count</div>
+                </div>
+
+                {isAuthenticated && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsManualSyncing(true);
+                      try {
+                        const ok = await triggerSync();
+                        setFeedback({
+                          type: ok ? 'success' : 'error',
+                          message: ok ? 'Cloud sync completed successfully.' : 'Sync failed. Please retry.',
+                        });
+                      } finally {
+                        setIsManualSyncing(false);
+                      }
+                    }}
+                    disabled={isManualSyncing}
+                    className="px-3 py-1.5 rounded-lg bg-[#171A24] hover:bg-[#202534] border border-[#242938] hover:border-[#D6B36A]/50 text-xs text-[#F4F4F5] font-semibold transition-colors flex items-center gap-2 cursor-pointer mt-3"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isManualSyncing ? 'animate-spin text-[#D6B36A]' : ''}`} />
+                    {isManualSyncing ? 'Synchronizing...' : 'Trigger Sync Now'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* AI Provider & Intelligence Section */}
         <div className="rounded-xl border border-[#242938] bg-[#171A24] p-6 space-y-6">

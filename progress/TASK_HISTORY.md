@@ -220,4 +220,76 @@
     - **Build**: `compile_applet` passed successfully.
     - **Playwright Browser Tests**: Verified Dashboard card, Training Academy recommendations, Progress topic matrix, and responsive viewports (Desktop 1440x900, Tablet 768x1024, Mobile 390x844).
 
+## [2026-11-06] — TASK 08: Critical Taxonomy Synchronization & Remediation
+- **Status**: COMPLETED & VERIFIED
+- **Auditor / Lead Engineer**: Senior Chess Systems Architect
+- **Defect Discovered in Audit**:
+  - Independent read-only verification returned **FAIL** after discovering that 14 out of 30 lessons (46.7% of the canonical curriculum) in `src/features/learning-engine/models/topicTaxonomy.ts` had outdated/divergent IDs relative to `CANONICAL_LESSON_IDS`.
+  - Impact: All training exercise attempts and lesson completions for Level 4 (`l-403`, `l-404`), Level 5 (`l-501` to `l-504`), Level 6 (`l-601` to `l-604`), and Level 7 (`l-701` to `l-704`) were silently dropped during ingestion, and next-lesson recommendations for these levels incorrectly fell back to `'opening_principles'`.
+- **Root Cause**:
+  - Early conceptual draft IDs were left in `topicTaxonomy.ts` while `curriculumData.ts` and `index.ts` had evolved to use standardized pedagogical naming.
+- **Remediation Applied**:
+  - Synchronized all 14 divergent entries in `LESSON_TOPIC_MAPPINGS` with exact canonical IDs and verified educational categories:
+    - `l-403-the-lucena-bridge` → `endgame_fundamentals`
+    - `l-404-good-vs-bad-bishops` → `positional_understanding`
+    - `l-501-candidate-moves-elimination` → `calculation_accuracy`
+    - `l-502-positional-exchange-sacrifice` → `calculation_accuracy`
+    - `l-503-fortress-defensive-resource` → `endgame_fundamentals`
+    - `l-504-the-zwischenzug-intermediate-move` → `tactical_patterns`
+    - `l-601-master-prophylaxis-restriction` → `positional_understanding`
+    - `l-602-principle-of-two-weaknesses` → `positional_understanding`
+    - `l-603-stalemate-swindle-resource` → `hanging_pieces_blunders`
+    - `l-604-the-minority-attack-carlsbad` → `positional_understanding`
+    - `l-701-najdorf-dynamic-preparation` → `opening_principles`
+    - `l-702-grandmaster-multi-ply-calculation` → `calculation_accuracy`
+    - `l-703-tournament-pragmatism-simplification` → `endgame_fundamentals`
+    - `l-704-converting-plus-equals-endgame` → `endgame_fundamentals`
+  - Added Test 11 in `tests/unit/learningEngine.test.ts` enforcing 100% dictionary completeness, bidirectional ID existence in `LESSON_MAP`, and zero stale entries.
+  - Added Tests 12–15 testing multi-level evidence ingestion across Levels 4, 5, 6, and 7 without silent drops or category distortion.
+  - Added Test 16 testing a full 30-lesson combined multi-level profile spanning Levels 1 through 7.
+- **Verification Results**:
+  - Unit tests: **111/111 passed (100% pass rate)**.
+  - TypeScript: `tsc --noEmit` passed with 0 errors.
+  - Linter: `npm run lint` passed with 0 errors.
+  - Production build: `npm run build` completed cleanly in 1.35s.
+  - TASK 01–07 compatibility: 100% preserved.
 
+
+
+## [2026-11-06] — TASK 09: Backend & Cloud Synchronization
+- **Status**: COMPLETED & VERIFIED
+- **Architect / Engineer**: Lead Full-Stack & Cloud Architecture Engineer
+- **Summary of Implementation**:
+  - **Supabase Authentication Engine (`src/services/supabase/authService.ts`)**:
+    - Complete typed auth lifecycle: `signUp`, `signIn`, `signOut`, `getSession`, `getCurrentUser`, `resetPassword`, `onAuthStateChange`.
+    - Boundary protection: Graceful, safe fallback when unconfigured without throwing errors.
+  - **PostgreSQL Database Migration (`supabase/migrations/00002_cloud_synchronization.sql`)**:
+    - Created tables for cross-device state: `user_academy_progress`, `user_lesson_progress`, `user_activity_history`, `test_arena_reports`, `learner_profiles`, and extended `profiles`.
+    - **100% Row Level Security (RLS)**: Enforced strict user isolation across all tables with `auth.uid() = user_id` (or `id`) policies on SELECT, INSERT, UPDATE, DELETE.
+    - Foreign key constraints to `auth.users(id) ON DELETE CASCADE`.
+    - High-performance B-tree indexes on `user_id`, `lesson_id`, `created_at`, `timestamp`.
+  - **Local-First Cloud Synchronization Engine (`src/services/supabase/syncService.ts`)**:
+    - Bidirectional synchronization merging local localStorage records with Supabase tables.
+    - Deterministic conflict resolution algorithms:
+      - Academy progress: Set union of completed lessons and modules; `Math.max` for exercise attempts; newest active timestamp.
+      - Lesson progress: Merges attempt counts (`Math.max`), preserves completed flags (`true` if local or cloud completed), preserves exercise passed.
+      - Activity history: Deduplicated by unique `id`, reverse chronological sorting, 50-item cap.
+      - Test Arena reports: Deduplicated by report `id`, favors `completed` status over `in_progress`.
+      - User settings: Last-write-wins based on `updatedAt`.
+      - Learner profile: Deterministically recomputed on-device via `LearningEngineService.computeProfile()` and synchronized back to cloud.
+    - Non-destructive offline resilience: Network offline detection via `navigator.onLine` and event listeners; local data is never erased on sync errors.
+  - **React Context & UI Integration**:
+    - App-wide `AuthProvider` and `useAuth` hook in `src/features/auth/AuthContext.tsx`.
+    - Auto-sync cycle on initial session restore and login.
+    - `SyncStatusBadge`: Displays real-time persistence states (`synced`, `syncing`, `offline`, `local_only`, `error`) with manual retry trigger.
+    - `AuthModal`: High-fidelity luxury modal in dark aesthetic (`#10121B`, `#D6B36A`), tabbed sign in/register, input validation, unconfigured preview notification, and guest bypass.
+    - Integrated into `TopNavbar` (sync badge, sign in button, user pill), `ProfilePage` (Member credentials, Cloud Synchronization card, diagnostics), and `SettingsPage` (Cloud Account & Cross-Device Synchronization section).
+  - **Server-Side Secret Hardening (`src/server/configManager.ts`)**:
+    - Production warning when `CONFIG_ENCRYPTION_SECRET` is unset.
+    - Gemini API keys strictly kept on server with AES-256-GCM; never sent to Supabase.
+  - **Automated Verification**:
+    - Added 9 new unit and security tests: `tests/unit/supabaseAuth.test.ts`, `tests/unit/cloudSync.test.ts`, `tests/unit/databaseSecurity.test.ts`.
+    - Total test suite: **120/120 tests passed (100% pass rate)**.
+    - Static analysis: `tsc --noEmit` and `npm run lint` 0 errors.
+    - Production build: `compile_applet` passed successfully.
+    - Browser automation: Live verified on Chromium headless with 0 console errors.

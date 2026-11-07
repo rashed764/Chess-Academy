@@ -1,42 +1,65 @@
-# Current Task: TASK 08 — Personalized Learning Engine
+# Current Task: TASK 09 — Backend & Cloud Synchronization
 
-## Status: COMPLETED & AUDITED
+## Status: COMPLETED
 
 ### Objective
-Deliver **TASK 08 — Personalized Learning Engine** for CHESS ACADEMY:
-1. **Evidence-Based Learner Performance Profiling**:
-   - Synthesizes actual exercise attempts, passed/failed history, and completed lessons from `ProgressStorage`.
-   - Ingests verified Test Arena diagnostic assessments (`AssessmentReport`), including engine move classifications (blunders, mistakes, best moves), phase metrics (Opening, Endgame), ACPL, and accuracy percentages.
-   - Distinguishes confirmed strengths, potential weaknesses, repeated weaknesses, and insufficient data areas without assuming or fabricating metrics.
-2. **Conservative Educational Weakness Detection**:
-   - Classifies learning gaps across 10 defined chess categories (`tactical_patterns`, `hanging_pieces_blunders`, `checkmate_patterns`, `king_safety`, `opening_principles`, `piece_activity_development`, `positional_understanding`, `endgame_fundamentals`, `calculation_accuracy`, `time_management`).
-   - Requires multiple verified errors (never triggers on single isolated mistakes).
-   - Tracks sample count, confidence levels, recent error frequency, and pedagogical remedies.
-3. **Personalized Learning Recommendations**:
-   - Recommends next canonical lessons based on prerequisites, targeted lesson revisions for identified weaknesses, blitz/speed drills for time trouble, and diagnostic assessment checks.
-   - Every recommendation references real canonical lessons (`CANONICAL_LESSON_IDS`). Never fabricates lesson IDs or curriculum content.
-4. **Adaptive Curriculum Sequencing**:
-   - Respects the 7-level, 30-lesson canonical curriculum order and unlock rules.
-   - Recommends revision without repeatedly locking the student or bypassing prerequisite gates.
-5. **Topic Mastery & Performance Analytics**:
-   - Calculates sample-weighted attempt counts, success rates, recent trends (`improving`, `regressing`, `stable`), and conservative mastery statuses (`insufficient_data`, `developing`, `competent`, `proficient`, `mastered`).
-6. **UI Integration**:
-   - **Dashboard**: `PersonalizedFocusCard` displaying primary learning objective, priority badges, focus disciplines, and quick action buttons.
-   - **Training Academy**: `AdaptiveRecommendationsList` mounted directly above the curriculum level selector.
-   - **Progress Page**: `TopicMasterySection` featuring confirmed strengths, identified gaps, and the comprehensive 10-discipline performance matrix.
-   - **Test Arena**: Explicit bridge from post-game syllabus recommendations to the Personalized Learning Engine and Progress trajectory.
-7. **Local Persistence**:
-   - `LearningEngineStorage` persisting profile state under `chess_academy_learner_profile_v1` with safe corrupted-JSON recovery.
-8. **Testing & Multi-Viewport Verification**:
-   - 10 comprehensive unit tests covering empty state, new learner, training evidence, arena evidence, single-mistake protection, repeated weakness triggering, canonical ID validation, prerequisite enforcement, idempotency, and trend detection.
-   - Browser verification on Desktop (1440x900), Tablet (768x1024), and Mobile (390x844).
+Connect the existing local-first Chess Academy application (Tasks 01–08) to Supabase without breaking the unauthenticated or offline experience:
+1. **Supabase Authentication**:
+   - Registration with email and password (`SupabaseAuthService.signUp`).
+   - Sign in with email and password (`SupabaseAuthService.signIn`).
+   - Sign out (`SupabaseAuthService.signOut`).
+   - Session restoration on reload and reactive auth state listening (`SupabaseAuthService.onAuthStateChange`).
+   - Graceful fallback when unconfigured (offline / local-first operation without errors or crashes).
+2. **Database Schema & Security Hardening**:
+   - Created PostgreSQL migration `00002_cloud_synchronization.sql` extending the database schema with:
+     - `user_academy_progress`: level standing, completed lesson IDs, module IDs, unlocked level IDs, total/correct/incorrect attempts, last active timestamp.
+     - `user_lesson_progress`: granular per-lesson attempts, reading/exercise completion flags, best attempts.
+     - `user_activity_history`: activity log items with cascade deletion.
+     - `test_arena_reports`: complete diagnostic evaluation battery reports with JSONB results and games.
+     - `learner_profiles`: cached personalized learning profile (topic metrics, strengths, weaknesses, plan, recommendations).
+     - `profiles`: extended with board customization settings and ratings.
+   - **Row Level Security (RLS)**: Explicitly enabled on 100% of tables with strict `auth.uid() = user_id` (or `id`) policies across SELECT, INSERT, UPDATE, DELETE.
+   - Primary keys and foreign keys referencing `auth.users(id) ON DELETE CASCADE`.
+   - B-tree performance indexes on all user queries.
+3. **Local-First Cloud Synchronization Engine**:
+   - `CloudSyncService` (`src/services/supabase/syncService.ts`):
+     - Bidirectional sync merging local localStorage with Supabase cloud tables.
+     - Deterministic conflict resolution:
+       - Academy progress: Set union of completed lesson IDs, module IDs, unlocked levels; `Math.max` for exercise attempts.
+       - Lesson progress: Merges attempt counts (`Math.max`), preserves completion (`true` if local or cloud completed), preserves exercise passed.
+       - Activity history: Deduplicated by unique `id`, sorted descending, capped at 50 items locally.
+       - Arena reports: Deduplicated by report `id`, favors `completed` status over `in_progress`.
+       - Settings: Last-write-wins based on `updatedAt` timestamp.
+       - Learner profile: Recomputed deterministically on-device via `LearningEngineService.computeProfile(mergedProgress, mergedReports)` and upserted back to cloud.
+     - Non-destructive resilience: If offline or sync encounters network error, local data is completely preserved.
+4. **React Authentication & Sync Integration**:
+   - `AuthProvider` and `useAuth` hook (`src/features/auth/AuthContext.tsx`):
+     - App-wide state: `user`, `session`, `isAuthenticated`, `syncStatus`, `lastSyncedAt`, `signIn`, `signUp`, `signOut`, `triggerSync`.
+     - Automatic sync cycle on initial session restore and login.
+   - `SyncStatusBadge`: Displays real-time cloud persistence indicator (`synced`, `syncing`, `offline`, `local_only`, `error`) with force-sync trigger.
+   - `AuthModal`: High-fidelity luxury modal matching dark aesthetic (`#10121B`, `#D6B36A`), sign-in/register tabs, input validation, unconfigured preview notice, guest continue action.
+   - UI Integration: Mounted in `TopNavbar`, `ProfilePage`, and `SettingsPage`.
+5. **Secret Security Hardening**:
+   - `src/server/configManager.ts`: Added production check warning if `CONFIG_ENCRYPTION_SECRET` is unset.
+   - Gemini API keys remain strictly server-side encrypted with AES-256-GCM; never exposed or synced to Supabase tables.
+6. **Automated Unit & Security Tests**:
+   - `tests/unit/supabaseAuth.test.ts`: Unconfigured fallback safety, method integrity.
+   - `tests/unit/cloudSync.test.ts`: Deterministic merge logic, deduplication, attempt counts, arena reports resolution.
+   - `tests/unit/databaseSecurity.test.ts`: Verified RLS on 100% of tables, `auth.uid()` policy constraints, CASCADE foreign keys, and indexes.
 
 ---
 
 ### Verification Summary
-- **Unit Tests (`npm test`)**: **105/105 passed (100% pass rate)**.
+- **Unit Tests (`npm test`)**: **120/120 passed (100% pass rate)** across 15 test files.
 - **TypeScript Static Verification (`tsc --noEmit`)**: **0 errors, 0 warnings**.
 - **Linter (`npm run lint`)**: **0 errors**.
 - **Production Build (`compile_applet`)**: **PASS (Build succeeded)**.
-- **TASK 01–07 Integrity**: 100% preserved.
-- **TASK 09 Status**: `NOT_STARTED` (Strictly isolated until user instructs to proceed).
+- **Browser Automation Verification**: Verified live in Chromium headless:
+  - TopNavbar shows `Local Mode` badge and `Sign In` button.
+  - Clicking `Sign In` renders `AuthModal` with tabs, validation, and guest fallback.
+  - Closing modal restores page without errors.
+  - `/profile` displays member credentials and Cloud Synchronization status card with sync diagnostics.
+  - `/settings` displays Cloud Account & Cross-Device Synchronization card alongside AI provider settings.
+  - Console logs: 0 errors.
+- **TASK 09 Status**: `COMPLETED`.
+- **TASK 10 Status**: `NOT_STARTED` (Awaiting explicit user instruction).

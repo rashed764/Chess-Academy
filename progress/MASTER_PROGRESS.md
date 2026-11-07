@@ -22,17 +22,17 @@ This roadmap tracks all 10 architectural and feature tasks for building the **CH
 | **TASK 06** | **AI Coach Intelligence** | **COMPLETED** | Cloud AI coach service with Google GenAI / Gemini API, server-side secure endpoints, engine-grounded explanations, 3-stage progressive hints, conversational coaching, dynamic model management, and acceptance gap closure. |
 | **TASK 07** | **Test Arena** | **COMPLETED** | Unbiased diagnostic matches (Single Match, 5-Game Battery, Tactical Speed), client Stockfish WASM post-game evaluation, ACPL & custom accuracy profiling, phase diagnostics, experimental skill range disclosure, interactive game replay, and local persistence. |
 | **TASK 08** | **Personalized Learning Engine** | **COMPLETED** | Evidence-based adaptive learning engine synthesizing Training exercise attempts and Test Arena diagnostics, 10 educational discipline taxonomies, conservative weakness detection, personalized learning plan, adaptive curriculum recommendations, topic mastery matrix in Progress, and zero prerequisite bypass. |
-| **TASK 09** | **Backend & Cloud Synchronization** | `NOT_STARTED` | Supabase authentication, PostgreSQL database persistence, match history sync, cloud study streak tracking. |
+| **TASK 09** | **Backend & Cloud Synchronization** | **COMPLETED** | Supabase authentication, PostgreSQL database persistence with 100% RLS user isolation, deterministic bidirectional synchronization (lessons, exercise attempts, activity log, test arena reports, on-device learner profile recomputation), offline resilience, TopNavbar/Profile/Settings UI integration, and server secret hardening. |
 | **TASK 10** | **Testing & Production** | `NOT_STARTED` | Comprehensive end-to-end testing, performance profiling, responsive cross-device verification, final production readiness. |
 
 ---
 
 ## Phase Metrics
 - **Total Tasks**: 10
-- **Completed**: 8
+- **Completed**: 9
 - **In Progress**: 0
-- **Remaining**: 2
-- **Current Milestone**: TASK 08 Complete — Awaiting User Approval to Start TASK 09
+- **Remaining**: 1
+- **Current Milestone**: TASK 09 Completed & Verified — Awaiting User Approval to Start TASK 10
 
 
 

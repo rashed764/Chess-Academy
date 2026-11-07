@@ -2,14 +2,36 @@ import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { coachRouter } from './src/server/coachRouter';
+import { spawn } from 'node:child_process';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const isTsxRunning =
+  process.env.__TSX_BOOTSTRAPPED__ === 'true' ||
+  process.execArgv.some((arg) => arg.includes('tsx'));
+
+if (!isTsxRunning) {
+  process.env.__TSX_BOOTSTRAPPED__ = 'true';
+  const child = spawn(process.execPath, ['--import', 'tsx', ...process.argv.slice(1)], {
+    stdio: 'inherit',
+    env: process.env,
+  });
+  child.on('exit', (code, signal) => {
+    if (signal) process.kill(process.pid, signal);
+    else process.exit(code ?? 0);
+  });
+} else {
+  startServer().catch((err) => {
+    console.error('[Chess Academy] Server startup failed:', err);
+    process.exit(1);
+  });
+}
+
 async function startServer() {
+  const { coachRouter } = await import('./src/server/coachRouter');
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   const isProd = process.env.NODE_ENV === 'production';
@@ -49,8 +71,3 @@ async function startServer() {
     console.log(`[Chess Academy] Server running on http://0.0.0.0:${PORT}`);
   });
 }
-
-startServer().catch((err) => {
-  console.error('[Chess Academy] Server startup failed:', err);
-  process.exit(1);
-});

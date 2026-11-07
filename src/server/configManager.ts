@@ -19,13 +19,33 @@ export interface ConfigStatusResponse {
 const CONFIG_DIR = path.resolve(process.cwd(), 'data');
 const CONFIG_FILE_PATH = path.join(CONFIG_DIR, 'provider_config.enc');
 const DEFAULT_MODEL = 'gemini-3.8-flash';
-
-// Derive a 32-byte key for AES-256-GCM using scrypt
-const SECRET_SEED = process.env.CONFIG_ENCRYPTION_SECRET || 'chess-academy-gemini-provider-secret-v1';
+export const FALLBACK_DEV_SEED = 'chess-academy-gemini-provider-secret-v1';
 const SALT = 'chess-academy-salt-2026';
-const ENCRYPTION_KEY = crypto.scryptSync(SECRET_SEED, SALT, 32);
 
 let memoryConfigCache: ServerAIConfig | null = null;
+let hasDecryptionError = false;
+
+/**
+ * Derives a 32-byte key for AES-256-GCM using scrypt.
+ * Strictly enforces that production environments MUST provide an external non-fallback secret.
+ */
+export function getEncryptionKey(): Buffer {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const secret = process.env.CONFIG_ENCRYPTION_SECRET?.trim();
+
+  if (isProduction) {
+    if (!secret || secret === '' || secret === FALLBACK_DEV_SEED) {
+      throw new Error(
+        '[ConfigManager] FATAL: Production environment requires an externally supplied CONFIG_ENCRYPTION_SECRET. Hardcoded fallback seed is forbidden in production.'
+      );
+    }
+    return crypto.scryptSync(secret, SALT, 32);
+  }
+
+  // Development and testing environments: safely allow custom secret or dev fallback
+  const effectiveSeed = secret || FALLBACK_DEV_SEED;
+  return crypto.scryptSync(effectiveSeed, SALT, 32);
+}
 
 function ensureDirectoryExists(dirPath: string): void {
   if (!fs.existsSync(dirPath)) {
@@ -33,9 +53,10 @@ function ensureDirectoryExists(dirPath: string): void {
   }
 }
 
-function encrypt(text: string): { iv: string; tag: string; content: string } {
+export function encrypt(text: string): { iv: string; tag: string; content: string } {
+  const key = getEncryptionKey();
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
   const tag = cipher.getAuthTag().toString('hex');
@@ -46,10 +67,15 @@ function encrypt(text: string): { iv: string; tag: string; content: string } {
   };
 }
 
-function decrypt(encryptedData: { iv: string; tag: string; content: string }): string {
+export function decrypt(encryptedData: { iv: string; tag: string; content: string }): string {
+  const key = getEncryptionKey();
+  if (!encryptedData.iv || !encryptedData.tag || !encryptedData.content) {
+    throw new Error('Malformed encrypted payload: missing iv, tag, or content');
+  }
+
   const decipher = crypto.createDecipheriv(
     'aes-256-gcm',
-    ENCRYPTION_KEY,
+    key,
     Buffer.from(encryptedData.iv, 'hex')
   );
   decipher.setAuthTag(Buffer.from(encryptedData.tag, 'hex'));
@@ -60,7 +86,8 @@ function decrypt(encryptedData: { iv: string; tag: string; content: string }): s
 
 /**
  * Reads and decrypts stored server configuration from disk, updating cache.
- * Safely handles missing, corrupted, or invalid encryption key payloads.
+ * Safely handles missing, corrupted, or invalid encryption key payloads without throwing uncaught exceptions.
+ * If decryption fails, records a flag to prevent corrupting or overwriting existing on-disk secrets.
  */
 export function loadServerConfig(): ServerAIConfig {
   if (memoryConfigCache) {
@@ -70,6 +97,7 @@ export function loadServerConfig(): ServerAIConfig {
   try {
     if (!fs.existsSync(CONFIG_FILE_PATH)) {
       memoryConfigCache = {};
+      hasDecryptionError = false;
       return memoryConfigCache;
     }
 
@@ -78,9 +106,14 @@ export function loadServerConfig(): ServerAIConfig {
     const decryptedText = decrypt(encryptedData);
     const parsed: ServerAIConfig = JSON.parse(decryptedText);
     memoryConfigCache = parsed;
+    hasDecryptionError = false;
     return parsed;
   } catch (err) {
-    console.error('[ConfigManager] Failed to read or decrypt server config (corrupted or invalid key), falling back safely:', err);
+    console.error(
+      '[ConfigManager] Failed to read or decrypt server config (corrupted payload or invalid secret key):',
+      err instanceof Error ? err.message : err
+    );
+    hasDecryptionError = true;
     memoryConfigCache = {};
     return memoryConfigCache;
   }
@@ -88,29 +121,41 @@ export function loadServerConfig(): ServerAIConfig {
 
 /**
  * Encrypts and persists configuration to disk atomically with restrictive mode permissions (0o600).
+ * Fails closed if the secret is missing in production, or if an existing encrypted file could not be decrypted.
  */
 export function saveServerConfig(config: ServerAIConfig): void {
+  // 1. Enforce encryption key validation (throws in production if secret is missing or default)
+  getEncryptionKey();
+
+  // 2. Safeguard against overwriting existing undecryptable configuration
+  if (hasDecryptionError && fs.existsSync(CONFIG_FILE_PATH)) {
+    throw new Error(
+      '[ConfigManager] Refusing to overwrite existing encrypted configuration: previous configuration could not be decrypted with current secret key. Aborting to protect stored secrets.'
+    );
+  }
+
   try {
     ensureDirectoryExists(CONFIG_DIR);
     const payload = JSON.stringify(config);
     const encrypted = encrypt(payload);
-    
+
     // Atomic file write using temporary file and atomic rename
     const tempFilePath = path.join(CONFIG_DIR, `.provider_config_${Date.now()}.tmp`);
     fs.writeFileSync(tempFilePath, JSON.stringify(encrypted, null, 2), { encoding: 'utf8', mode: 0o600 });
     fs.renameSync(tempFilePath, CONFIG_FILE_PATH);
-    
+
     // Enforce permissions on final file
     try {
       fs.chmodSync(CONFIG_FILE_PATH, 0o600);
     } catch {
       // Ignore chmod on platform/filesystems that do not support POSIX permissions
     }
-    
+
     memoryConfigCache = { ...config };
+    hasDecryptionError = false;
   } catch (err) {
     console.error('Failed to save encrypted server config:', err);
-    throw new Error('Failed to persist configuration securely');
+    throw err instanceof Error ? err : new Error('Failed to persist configuration securely');
   }
 }
 
@@ -203,10 +248,18 @@ export function getConfigStatus(): ConfigStatusResponse {
 }
 
 /**
- * For testing purposes: resets memory cache and deletes test file.
+ * Returns whether a decryption error currently exists on the loaded file.
+ */
+export function hasDecryptionErrorFlag(): boolean {
+  return hasDecryptionError;
+}
+
+/**
+ * For testing purposes: resets memory cache, error flags, and deletes test file.
  */
 export function resetConfigForTest(): void {
   memoryConfigCache = null;
+  hasDecryptionError = false;
   if (fs.existsSync(CONFIG_FILE_PATH)) {
     try {
       fs.unlinkSync(CONFIG_FILE_PATH);
