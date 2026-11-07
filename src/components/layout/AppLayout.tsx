@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopNavbar } from './TopNavbar';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 
 export const AppLayout: React.FC = () => {
   return (
@@ -22,7 +23,15 @@ export const AppLayout: React.FC = () => {
         <TopNavbar />
 
         <main id="main-content" tabIndex={-1} className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="min-h-[50vh] flex items-center justify-center">
+                <LoadingSpinner size="lg" label="Entering Academy Hall..." />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

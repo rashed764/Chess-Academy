@@ -1,6 +1,6 @@
 # Known Issues & Environmental Constraints
 
-## Current Status (Task 09 Backend & Cloud Synchronization Completion)
+## Current Status (Task 10 Testing & Production Readiness Completion)
 
 | Area | Issue / Boundary | Severity | Mitigation / Resolution Plan |
 | :--- | :--- | :--- | :--- |
@@ -19,6 +19,9 @@
 | **Personalized Learning Engine** | Evidence synthesis, weakness detection, adaptive recommendations | **RESOLVED in Task 08** | Ingestion of actual training attempts and arena diagnostics, 10 educational categories, conservative weakness thresholds (no weakness on single errors), canonical curriculum integrity, and local persistence. |
 | **Curriculum Taxonomy Synchronization** | Divergent lesson IDs in `topicTaxonomy.ts` dropping Level 4–7 evidence | **RESOLVED in Task 08 Remediation** | Synchronized all 14 divergent lesson IDs in `LESSON_TOPIC_MAPPINGS` with `CANONICAL_LESSON_IDS`; added automated dictionary completeness assertions and multi-level ingestion regression tests. |
 | **Supabase Cloud Synchronization & Auth** | Cross-device progress persistence and database security | **RESOLVED in Task 09** | Implemented `SupabaseAuthService` (sign-in/up/out/session restore), PostgreSQL migration `00002_cloud_synchronization.sql` with 100% RLS on user tables (`auth.uid() = user_id`), `CloudSyncService` deterministic bidirectional merge (union of lessons, max attempts, activity history deduplication, arena reports merge, on-device learner profile recomputation), TopNavbar/Profile/Settings UI integration, and `SyncStatusBadge`. |
+| **Dev Server Pre-warming Port Crash** | Container Nginx `PORT=8080` collided with dev server causing `EADDRINUSE` | **RESOLVED in Task 10** | Implemented `resolvePort(args, env)` in `server.ts` prioritizing CLI args `--port`, ignoring container `PORT=8080`, and defaulting strictly to required port 3000. Guarded startup with `isMainScript`. |
+| **Monolithic Initial Bundle Size** | Initial production bundle was 1,415 kB triggering Rollup chunk warnings | **RESOLVED in Task 10** | Implemented route-level dynamic code splitting via `React.lazy()` across all 10 feature routes and Rollup manual vendor chunking in `vite.config.ts`. Reduced initial bundle to 180 kB (87% reduction). |
+| **WebSocket HMR Port Collision** | Dev Vite middleware triggered WebSocket port 24678 conflicts | **RESOLVED in Task 10** | Disabled HMR (`hmr: false`) in dev Vite middleware in `server.ts`. |
 | **In-Memory Rate Limiter Boundary** | Token bucket is in-memory per Node process. | Architectural Limitation | State resets on server restart and is not shared across multi-node clusters. Acceptable for single-instance applet. |
 | **Container LLM Egress / Credentials** | External API egress or missing API key in container environment. | Environmental Boundary | Guarded with 10-second timeout and high-fidelity deterministic local fallback (`source: 'local_fallback'`). App remains 100% operational offline. |
 | **Gemini AbortSignal SDK Semantics** | AbortSignal in @google/genai SDK is a client-only operation | Client SDK Boundary | Aborting client wait cancels server HTTP socket reading to prevent thread blocking, but does not guarantee remote Google service cancellation. Timed-out requests resolve immediately to deterministic fallback without retrying. |

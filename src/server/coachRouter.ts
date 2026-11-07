@@ -25,6 +25,7 @@ import {
   explainMove,
   chatWithCoach,
 } from './coachService';
+import { executeTutorTurn } from './tutorService';
 
 export const coachRouter = Router();
 
@@ -332,3 +333,53 @@ coachRouter.post('/chat', async (req: Request, res: Response): Promise<void> => 
     });
   }
 });
+
+/**
+ * POST /api/coach/tutor-turn
+ * Autonomous AI Tutor conversational turn with structured tool calling & board manipulation.
+ */
+coachRouter.post('/tutor-turn', async (req: Request, res: Response): Promise<void> => {
+  const { messages, boardState, learnerContext } = req.body || {};
+
+  if (!Array.isArray(messages) || messages.length === 0) {
+    res.status(400).json({ error: 'Messages must be a non-empty array' });
+    return;
+  }
+
+  const safeFen = typeof boardState?.fen === 'string' ? boardState.fen : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  const fenVal = validateFen(safeFen);
+
+  const cleanRequest = {
+    messages: messages.slice(-12).map((m: any) => ({
+      role: m.role === 'assistant' ? ('assistant' as const) : m.role === 'system' ? ('system' as const) : ('user' as const),
+      content: String(m.content || '').slice(0, 1500),
+    })),
+    boardState: {
+      fen: fenVal.valid && fenVal.data ? fenVal.data : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      mode: boardState?.mode || 'free_play',
+      boardOrientation: boardState?.boardOrientation === 'black' ? ('black' as const) : ('white' as const),
+      lastMove: boardState?.lastMove,
+      activeLessonId: boardState?.activeLessonId,
+      activeExerciseObjective: boardState?.activeExerciseObjective,
+    },
+    learnerContext: {
+      currentLevelId: learnerContext?.currentLevelId || 'level-1-absolute-beginner',
+      completedLessonIds: Array.isArray(learnerContext?.completedLessonIds) ? learnerContext.completedLessonIds : [],
+      isAssessed: Boolean(learnerContext?.isAssessed),
+      assessedLevelId: learnerContext?.assessedLevelId,
+      assessmentStage: learnerContext?.assessmentStage,
+      userName: learnerContext?.userName,
+    },
+  };
+
+  try {
+    const result = await executeTutorTurn(cleanRequest);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({
+      error: 'Failed to execute tutor turn',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+

@@ -11,7 +11,8 @@ import type {
   LessonProgressRecord,
 } from '../types';
 
-const STORAGE_KEY = 'chess_academy_training_progress_v1';
+export const STORAGE_KEY = 'chess_academy_training_progress_v1';
+export const TRAINING_STORAGE_KEY = STORAGE_KEY;
 const CURRENT_VERSION = 1;
 
 export const INITIAL_PROGRESS_STATE: AcademyProgressState = {

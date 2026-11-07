@@ -199,6 +199,22 @@ export class CoachApiClient {
       return data.reply;
     });
   }
+
+  async executeTutorTurn(
+    req: import('../../features/tutor/types').TutorTurnRequest
+  ): Promise<import('../../features/tutor/types').TutorTurnResponse> {
+    return retryWithBackoff(async () => {
+      const res = await fetchWithTimeout(`${this.baseUrl}/tutor-turn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req),
+      });
+      return handleResponseJson<import('../../features/tutor/types').TutorTurnResponse>(
+        res,
+        'Tutor turn'
+      );
+    });
+  }
 }
 
 export const coachApiClient = new CoachApiClient();

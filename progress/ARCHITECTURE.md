@@ -240,8 +240,6 @@ src/
    - Gemini API keys and `CONFIG_ENCRYPTION_SECRET` stay on the Node/Express server in `data/provider_config.enc` using AES-256-GCM.
    - Secrets are never persisted to Supabase tables or exposed to client-side scripts.
 
----
-
 ## 9. Master Task Roadmap Sequence
 
 1. **TASK 01 — Foundation & Project Setup** (COMPLETED)
@@ -253,4 +251,41 @@ src/
 7. **TASK 07 — Test Arena** (COMPLETED)
 8. **TASK 08 — Personalized Learning Engine** (COMPLETED)
 9. **TASK 09 — Backend & Cloud Synchronization** (COMPLETED)
-10. **TASK 10 — Testing & Production** (NEXT)
+10. **TASK 10 — Testing & Production** (COMPLETED)
+
+---
+
+## 10. Production Readiness, Bundle Optimization & Security Hardening (TASK 10)
+
+1. **Port Resolution & Container Topology**:
+   - Container environments (such as Google Cloud Run) inject `PORT=8080` for Nginx reverse proxy.
+   - The application backend (`server.ts`) implements `resolvePort(args, env)`:
+     - Strict priority: CLI argument `--port` / `-p` > `APP_PORT` > default `3000`.
+     - Explicitly ignores Nginx `PORT=8080` to prevent `EADDRINUSE` port collisions.
+   - Development Vite middleware disables WebSocket HMR (`hmr: false`) to avoid port 24678 collisions in containerized sandboxes.
+   - `server.ts` execution is guarded with `isMainScript` check (`process.argv[1].endsWith('server.ts')`), allowing helper functions to be imported safely in test runners without triggering server startup.
+
+2. **Bundle Optimization & Route-Level Code Splitting**:
+   - Initial monolithic bundle was **1,415 kB**, triggering Rollup chunk size warnings.
+   - Code splitting implemented across all 10 feature routes via dynamic `React.lazy()` imports in `src/routes/routes.config.tsx`:
+     - `DashboardPage`, `QuickMatchPage`, `TrainingPage`, `LessonRoom`, `TestArenaPage`, `OpeningsPage`, `AnalysisPage`, `ProgressPage`, `ProfilePage`, `SettingsPage`.
+   - Global `<Suspense>` wrapper in `src/components/layout/AppLayout.tsx` renders a branded `<LoadingSpinner size="lg" label="Entering Academy Hall..." />`.
+   - Function-based `manualChunks(id)` in `vite.config.ts` partitions vendor packages into:
+     - `vendor-react`: `react`, `react-dom`, `react-router-dom`
+     - `vendor-chess`: `chess.js`, `react-chessboard`
+     - `vendor-supabase`: `@supabase/supabase-js`
+     - `vendor-state`: `zustand`, `@tanstack/react-query`
+   - Initial entry bundle reduced to **180.15 kB (gzip: 50.81 kB)** — an **87% size reduction**.
+
+3. **Production Security Review**:
+   - **Secrets Boundary**: `GEMINI_API_KEY` and `CONFIG_ENCRYPTION_SECRET` reside strictly on the server and are never bundled or transmitted to the client.
+   - **Storage Encryption**: Custom API keys stored on server filesystem in `data/provider_config.enc` are encrypted with AES-256-GCM authenticated encryption.
+   - **Database Security**: 100% of Supabase tables have PostgreSQL Row Level Security (RLS) enabled with strict `auth.uid() = user_id` (or `id`) access policies.
+   - **Rate Limiting**: In-memory token bucket rate limiter strictly caps `/api/coach/*` requests to 60 req/min per IP.
+   - **Package Vulnerabilities**: `npm audit` confirms **0 vulnerabilities** across all 212 packages.
+
+4. **Production Documentation Suite**:
+   - `docs/PRODUCTION_DEPLOYMENT.md`: Hosting architecture, build commands, port resolution, Stockfish WASM serving, and Supabase migrations.
+   - `docs/ENVIRONMENT_VARIABLES.md`: Client vs server variable matrix, `VITE_` rules, required secrets, and fallback modes.
+   - `docs/VERIFICATION_GUIDE.md`: Step-by-step procedures for automated testing, static analysis, build verification, security audit, and user journeys A–G.
+

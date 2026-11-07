@@ -1,16 +1,37 @@
-import React from 'react';
+import React, { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout';
-import { DashboardPage } from '../features/dashboard/DashboardPage';
-import { QuickMatchPage } from '../features/quick-match/QuickMatchPage';
-import { TrainingAcademyPage } from '../features/training/TrainingAcademyPage';
-import { TestArenaPage } from '../features/test-arena/TestArenaPage';
-import { AnalysisPage } from '../features/analysis/AnalysisPage';
-import { OpeningsPage } from '../features/openings/OpeningsPage';
-import { ProgressPage } from '../features/progress/ProgressPage';
-import { ProfilePage } from '../features/profile/ProfilePage';
-import { SettingsPage } from '../features/settings/SettingsPage';
-import { NotFoundPage } from '../features/not-found/NotFoundPage';
+
+const DashboardPage = lazy(() =>
+  import('../features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage }))
+);
+const QuickMatchPage = lazy(() =>
+  import('../features/quick-match/QuickMatchPage').then((m) => ({ default: m.QuickMatchPage }))
+);
+const TrainingAcademyPage = lazy(() =>
+  import('../features/training/TrainingAcademyPage').then((m) => ({ default: m.TrainingAcademyPage }))
+);
+const TestArenaPage = lazy(() =>
+  import('../features/test-arena/TestArenaPage').then((m) => ({ default: m.TestArenaPage }))
+);
+const AnalysisPage = lazy(() =>
+  import('../features/analysis/AnalysisPage').then((m) => ({ default: m.AnalysisPage }))
+);
+const OpeningsPage = lazy(() =>
+  import('../features/openings/OpeningsPage').then((m) => ({ default: m.OpeningsPage }))
+);
+const ProgressPage = lazy(() =>
+  import('../features/progress/ProgressPage').then((m) => ({ default: m.ProgressPage }))
+);
+const ProfilePage = lazy(() =>
+  import('../features/profile/ProfilePage').then((m) => ({ default: m.ProfilePage }))
+);
+const SettingsPage = lazy(() =>
+  import('../features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage }))
+);
+const NotFoundPage = lazy(() =>
+  import('../features/not-found/NotFoundPage').then((m) => ({ default: m.NotFoundPage }))
+);
 
 export const appRoutesConfig: RouteObject[] = [
   {

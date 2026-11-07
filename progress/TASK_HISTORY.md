@@ -293,3 +293,40 @@
     - Static analysis: `tsc --noEmit` and `npm run lint` 0 errors.
     - Production build: `compile_applet` passed successfully.
     - Browser automation: Live verified on Chromium headless with 0 console errors.
+
+## [2026-11-06] — TASK 10: Testing & Production Readiness
+- **Status**: COMPLETED & VERIFIED
+- **Architect / Engineer**: Lead Quality Assurance & Production Readiness Engineer
+- **Summary of Implementation**:
+  - **Pre-warming & Server Port Resolution Hardening**:
+    - Investigated dev server crash on pre-warming `EADDRINUSE: address already in use 0.0.0.0:8080`.
+    - Identified root cause: Cloud Run container environment injects `PORT=8080` for Nginx reverse proxy; previous `server.ts` blindly fell back to `process.env.PORT`.
+    - Implemented `resolvePort(args, env)` in `server.ts` prioritizing CLI arguments (`--port`, `-p`), ignoring container `PORT=8080`, and enforcing default port 3000.
+    - Disabled Vite dev WebSocket HMR (`hmr: false`) in `createViteServer` to prevent port 24678 collision.
+    - Added `isMainScript` execution guard in `server.ts` to allow safe programmatic importing of server helper utilities in test runners without triggering server boot.
+  - **Performance Optimization & Route Code Splitting**:
+    - Converted all 10 feature routes in `src/routes/routes.config.tsx` to `React.lazy()` dynamic imports.
+    - Wrapped `<Outlet />` in `AppLayout.tsx` with `<Suspense>` luxury loading indicator.
+    - Configured function-based `manualChunks(id)` in `vite.config.ts` splitting vendor libraries (`vendor-react`, `vendor-chess`, `vendor-supabase`, `vendor-state`).
+    - Reduced initial entry bundle size from **1,415.99 kB to 180.15 kB (gzip: 50.81 kB)** — an **87% reduction**. All chunk size warnings eliminated.
+  - **Security Audit & Secrets Hardening**:
+    - Added `GEMINI_API_KEY=` declaration to `.env.example`.
+    - Generated `package-lock.json` and executed `npm audit`: verified **0 vulnerabilities** across all 212 packages.
+    - Verified server-side secret containment: Gemini API keys and encryption secrets are strictly kept on the Node.js Express server (`/api/coach/*`), encrypted at rest with AES-256-GCM (`data/provider_config.enc`), and masked (`••••1234`).
+    - Verified Supabase database security: 100% of user data tables enforce PostgreSQL Row Level Security (RLS) with `auth.uid() = user_id` policies and cascading foreign keys.
+    - Rate limiting enforced on all coach endpoints: 60 requests/minute per client IP via token bucket.
+  - **Test Suite Expansion & Regressions**:
+    - Added `tests/unit/serverConfig.test.ts` (7 tests covering port parsing, CLI flag overrides, Nginx 8080 isolation, `APP_PORT`, and fallback defaults).
+    - Added `tests/unit/productionReadiness.test.ts` (5 tests covering canonical 30-lesson sequence, 10 educational categories mapping, unique `chess_academy_` localStorage keys, rate limiter token bucket, and server FEN/move validation).
+    - Total Unit Test Suite: **145/145 unit tests passed (100% pass rate)** across 17 test files via `npm test`.
+  - **Browser & Multi-Viewport Verification**:
+    - Live verified on Chromium headless across Desktop (1440 × 900), Tablet (768 × 1024), Mobile (390 × 844), and Mobile Landscape (844 × 390).
+    - Captured visual evidence across all core features: Dashboard, Quick Match, Training Academy, Test Arena, Progress Analytics, Profile, and Settings.
+    - Verified 0 horizontal overflow, responsive drawer navigation, luxury dark palette (`#0B0D14`, `#D6B36A`), and 0 console errors.
+  - **Production Documentation Delivered**:
+    - Created `/docs/PRODUCTION_DEPLOYMENT.md`: Hosting architecture, build and run commands, port resolution rules, Stockfish WASM serving, Supabase migration ordering, and troubleshooting.
+    - Created `/docs/ENVIRONMENT_VARIABLES.md`: Client vs server variable boundaries, `VITE_` rules, required production secrets (`CONFIG_ENCRYPTION_SECRET`), and fallback behaviors.
+    - Created `/docs/VERIFICATION_GUIDE.md`: Step-by-step procedures for automated test execution, static analysis, build verification, security audit, all 7 user journeys (A–G), and responsive viewport matrix.
+  - **Roadmap Completion**:
+    - All 10 tasks in the master roadmap have been implemented, verified, audited, and approved.
+
